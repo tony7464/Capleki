@@ -24,6 +24,7 @@ import { CalendarIcon, ClockIcon, DollarIcon, PhoneIcon } from "../components/ui
 import MapLink from "../components/MapLink";
 import { PageHeader } from "../components/ui/PageHeader";
 import { useAsync } from "../hooks";
+import { deleteJobCopy } from "../utils/deleteJob";
 import { DEFAULT_DURATION, formatDay, formatDuration, formatTimeRange } from "../utils/format";
 import { isEstimate } from "../utils/visits";
 
@@ -239,12 +240,7 @@ function JobDetailView({ id }) {
         </div>
       )}
       <ConfirmDelete
-        label={estimate ? "Delete visit" : "Delete job"}
-        description={
-          estimate
-            ? "Removes this visit, its notes log, photos, and materials. Its quote stays as a draft. This cannot be undone."
-            : "Removes this job, its notes log, and its photos. This cannot be undone."
-        }
+        {...deleteJobCopy(job)}
         onConfirm={async () => {
           await api(`/api/jobs/${id}`, { method: "DELETE" });
           navigate("/jobs");

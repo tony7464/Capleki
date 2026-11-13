@@ -107,6 +107,7 @@ export default function TeamSchedule({ mode, variant, timezone, selfId, reloadKe
   const prefs = useSchedulePrefs();
   const [dialog, setDialog] = useState(null);
   const [moveError, setMoveError] = useState(null);
+  const [notice, setNotice] = useState(null);
   const hidden = useMemo(() => hiddenFromPrefs(prefs.prefs), [prefs.prefs]);
   const zone = schedule.data?.timezone || timezone;
   const phone = useMediaQuery(PHONE_QUERY);
@@ -119,6 +120,19 @@ export default function TeamSchedule({ mode, variant, timezone, selfId, reloadKe
     setMoveError(null);
     const updated = await api(`/api/jobs/${job.id}`, { method: "PATCH", body: patch });
     schedule.setData((data) => ({ ...data, jobs: data.jobs.map((item) => (item.id === updated.id ? updated : item)) }));
+    onChanged?.();
+  }
+
+  // From the quick view. A job someone already deleted elsewhere (404) is gone either way.
+  async function deleteJob(job) {
+    try {
+      await api(`/api/jobs/${job.id}`, { method: "DELETE" });
+    } catch (err) {
+      if (err.status !== 404) throw err;
+    }
+    schedule.setData((data) => ({ ...data, jobs: data.jobs.filter((item) => item.id !== job.id) }));
+    setDialog(null);
+    setNotice(`Deleted ${job.service_type}${job.client_name ? ` for ${job.client_name}` : ""}.`);
     onChanged?.();
   }
 
@@ -201,16 +215,27 @@ export default function TeamSchedule({ mode, variant, timezone, selfId, reloadKe
       <p className="mt-3 text-xs text-muted">
         {owner
           ? page
-            ? `Click an empty time to schedule a job; in Team, the column picks who does it. Drag a job in ${phone ? "Day" : "Day or Week"} to move it.`
-            : "Click an empty time to schedule a job. Drag a job to move it, or drag its bottom edge to change its length."
+            ? `Click an empty time to schedule a job; in Team, the column picks who does it. Drag a job in ${phone ? "Day" : "Day or Week"} to move it. Click a job to open or delete it.`
+            : "Click an empty time to schedule a job. Drag a job to move it, or drag its bottom edge to change its length. Click a job to open or delete it."
           : "Read-only. Only the owner adds or moves jobs. Prices are not shown."}
       </p>
       {dialog?.type === "job" && (
-        <JobQuickView job={dialog.job} showMoney={owner} openTo={openTo(dialog.job)} onClose={() => setDialog(null)} />
+        <JobQuickView
+          job={dialog.job}
+          showMoney={owner}
+          openTo={openTo(dialog.job)}
+          onClose={() => setDialog(null)}
+          onDelete={owner ? () => deleteJob(dialog.job) : undefined}
+        />
       )}
       {dialog?.type === "lunch" && <LunchQuickView lunch={dialog.lunch} onClose={() => setDialog(null)} />}
       {dialog?.type === "create" && owner && (
         <NewJobDialog initial={dialog.initial} onSubmit={createJob} onClose={() => setDialog(null)} />
+      )}
+      {notice && (
+        <Toast tone="success" onClose={() => setNotice(null)}>
+          {notice}
+        </Toast>
       )}
       <PrefsToast prefs={prefs} />
     </div>
