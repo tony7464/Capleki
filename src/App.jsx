@@ -40,6 +40,7 @@ import { homePath } from "./utils/roles";
 const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
 const InvoicesPage = lazy(() => import("./pages/InvoicesPage"));
 const PriceBookPage = lazy(() => import("./pages/PriceBookPage"));
+const StatsPage = lazy(() => import("./pages/StatsPage"));
 const MockCheckoutPage = lazy(() => import("./pages/MockCheckoutPage"));
 const PublicInvoicePage = lazy(() => import("./pages/PublicInvoicePage"));
 const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
@@ -71,6 +72,7 @@ const PRIVATE = [
   ["/invoices/:id", InvoiceDetail, "owner"],
   ["/price-book", PriceBookPage, "owner"],
   ["/reports", ReportsPage, "owner"],
+  ["/stats", StatsPage, "owner"],
   ["/settings", SettingsPage, "owner"],
   ["/my-jobs", MyJobsPage, "employee"],
   ["/my-jobs/:id", MyJobDetail, "employee"],
