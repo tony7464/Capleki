@@ -2,7 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { useUnreadRequests } from "../hooks";
-import { canSeeRequests, canSeeTeamSchedule, hasClientAccess, isOwner, roleLabel, usableCompanies } from "../utils/roles";
+import {
+  canSeeRequests,
+  canSeeTeamSchedule,
+  hasClientAccess,
+  isOwner,
+  isPlatformAdmin,
+  roleLabel,
+  usableCompanies,
+} from "../utils/roles";
 import CompanySwitcher, { CompanyList } from "./CompanySwitcher";
 import ThemeToggle from "./ThemeToggle";
 import { Avatar } from "./ui/Avatar";
@@ -39,6 +47,8 @@ function groupOf(path) {
 
 // Settings sits beside the account link on wide screens, and in the phone menu.
 const SETTINGS_LINK = ["/settings", "Settings"];
+// Only for the people who run Crew Job Tracker (see utils/roles.js).
+const ADMIN_LINK = ["/admin", "Admin"];
 
 function linksFor(user) {
   if (isOwner(user)) return OWNER_LINKS;
@@ -196,6 +206,19 @@ export default function NavBar() {
           {!loading && user && (
             <>
               <CompanySwitcher />
+              {isPlatformAdmin(user) && (
+                <NavLink
+                  to={ADMIN_LINK[0]}
+                  className={({ isActive }) =>
+                    cx(
+                      "hidden h-9 items-center rounded-lg px-2.5 text-[13px] font-semibold transition-colors md:inline-flex",
+                      isActive ? "bg-primary-soft text-primary-soft-fg" : "text-muted hover:bg-surface-2 hover:text-fg",
+                    )
+                  }
+                >
+                  {ADMIN_LINK[1]}
+                </NavLink>
+              )}
               {isOwner(user) && (
                 <NavLink
                   to={SETTINGS_LINK[0]}
@@ -261,7 +284,11 @@ export default function NavBar() {
           className="glass mx-auto mt-2 max-h-[calc(100dvh-5.5rem)] max-w-6xl animate-rise overflow-y-auto rounded-2xl border border-border shadow-pop md:hidden"
         >
           <nav aria-label="Main" className="space-y-1 px-3 py-3">
-            {[...linksFor(user), ...(isOwner(user) ? [SETTINGS_LINK] : [])].map(([to, label]) => (
+            {[
+              ...linksFor(user),
+              ...(isOwner(user) ? [SETTINGS_LINK] : []),
+              ...(isPlatformAdmin(user) ? [ADMIN_LINK] : []),
+            ].map(([to, label]) => (
               <NavLink key={to} to={to} className={mobileLink} onClick={close}>
                 <LinkLabel to={to} label={label} unread={unread} />
               </NavLink>

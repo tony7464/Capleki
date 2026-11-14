@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useMatch } from "react-router-dom";
 import NavBar from "./components/NavBar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import QuickAddButton from "./components/QuickAddButton";
+import SupportViewBanner from "./components/SupportViewBanner";
 import ClockBanner from "./components/time/ClockBanner";
 import VerifyEmailBanner from "./components/VerifyEmail";
 import Loading from "./components/Loading";
@@ -42,6 +43,8 @@ const InvoicesPage = lazy(() => import("./pages/InvoicesPage"));
 const PriceBookPage = lazy(() => import("./pages/PriceBookPage"));
 const StatsPage = lazy(() => import("./pages/StatsPage"));
 const ImportPage = lazy(() => import("./pages/ImportPage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const AdminBusiness = lazy(() => import("./pages/AdminBusiness"));
 const MockCheckoutPage = lazy(() => import("./pages/MockCheckoutPage"));
 const PublicInvoicePage = lazy(() => import("./pages/PublicInvoicePage"));
 const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
@@ -77,6 +80,9 @@ const PRIVATE = [
   ["/settings", SettingsPage, "owner"],
   // Bring clients and the price book over from Jobber, and download them as CSV files.
   ["/import", ImportPage, "owner"],
+  // For the people who run Crew Job Tracker: every business that has signed up.
+  ["/admin", AdminPage, "admin"],
+  ["/admin/businesses/:id", AdminBusiness, "admin"],
   ["/my-jobs", MyJobsPage, "employee"],
   ["/my-jobs/:id", MyJobDetail, "employee"],
   ["/calendar", CalendarPage, "employee"],
@@ -150,6 +156,7 @@ export default function App() {
       >
         Skip to content
       </a>
+      <SupportViewBanner />
       <NavBar />
       <ClockBanner />
       <main id="main" className="mx-auto w-full max-w-6xl px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
