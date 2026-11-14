@@ -1,6 +1,6 @@
 // Price book helpers: the kinds of item, filtering, and turning a job's materials and
 // clocked time into invoice lines.
-import { MAX_DESCRIPTION, MAX_ITEMS, blankItem, formatQuantity, isBlankLine } from "./quotes.js";
+import { MAX_DESCRIPTION, MAX_ITEMS, blankItem, formatQuantity, isBlankLine, lineDescription } from "./quotes.js";
 
 // [kind, one, many]. The order the kinds are shown in.
 export const PRICE_BOOK_KINDS = [
@@ -60,8 +60,7 @@ export function hoursFromMinutes(minutes) {
 
 // An hourly price book item as a line for the time clocked on a job.
 export function laborLine(item, minutes) {
-  const description = [item.name, item.description].filter(Boolean).join(" - ").slice(0, MAX_DESCRIPTION);
-  return { ...blankItem(), description, quantity: hoursFromMinutes(minutes), unit_price: item.unit_price };
+  return { ...blankItem(), description: lineDescription(item), quantity: hoursFromMinutes(minutes), unit_price: item.unit_price };
 }
 
 // The editor's lines with more added at the end. An untouched last line is replaced, and

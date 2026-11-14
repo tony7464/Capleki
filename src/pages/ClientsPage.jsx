@@ -7,12 +7,14 @@ import ErrorMessage from "../components/ErrorMessage";
 import { Checkbox } from "../components/Field";
 import Loading from "../components/Loading";
 import Pagination from "../components/Pagination";
-import { Button } from "../components/ui/Button";
+import { Button, ButtonLink } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/Feedback";
 import { PlusIcon, UsersIcon } from "../components/ui/Icons";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
+import { useAuth } from "../context/useAuth";
 import { usePaged } from "../hooks";
+import { isOwner } from "../utils/roles";
 
 export default function ClientsPage() {
   // ?archived=1 keeps "Show archived" on across reloads and shared links.
@@ -20,6 +22,7 @@ export default function ClientsPage() {
   const showArchived = searchParams.get("archived") === "1";
   const { setPage, result, error, reset } = usePaged("/api/clients", showArchived ? "include_archived=true" : "");
   const [adding, setAdding] = useState(false);
+  const { user } = useAuth();
 
   function toggleArchived(event) {
     const next = new URLSearchParams(searchParams);
@@ -50,7 +53,16 @@ export default function ClientsPage() {
       <PageHeader
         title="Clients"
         description={`${result.total} ${result.total === 1 ? "client" : "clients"}${showArchived ? ", including archived" : ""}`}
-        actions={addButton}
+        actions={
+          <>
+            {isOwner(user) && (
+              <ButtonLink to="/import" variant="secondary">
+                Import or export
+              </ButtonLink>
+            )}
+            {addButton}
+          </>
+        }
       />
       <Checkbox
         label="Show archived"

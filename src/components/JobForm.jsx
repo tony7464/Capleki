@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useSubmit } from "../hooks";
+import { clientLabels } from "../utils/clientLabels";
 import { REPEAT_OPTIONS, parseRepeat } from "../utils/series";
 import {
   DEFAULT_DURATION,
@@ -26,11 +27,10 @@ function assignableEmployees(employees, initial) {
 // listed (and labelled) so it can be edited; new jobs cannot pick it.
 function pickableClients(clients, initial) {
   const listed = clients.some((client) => String(client.id) === String(initial?.client_id));
-  if (!initial?.id || listed || !initial.client_name) return clients.map((client) => [client.id, client.name]);
-  return [
-    ...clients.map((client) => [client.id, client.name]),
-    [initial.client_id, `${initial.client_name} (archived)`],
-  ];
+  // Clients who share a name show their address too.
+  const options = [...clientLabels(clients)];
+  if (!initial?.id || listed || !initial.client_name) return options;
+  return [...options, [initial.client_id, `${initial.client_name} (archived)`]];
 }
 
 function durationOptions(current) {

@@ -41,6 +41,7 @@ const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
 const InvoicesPage = lazy(() => import("./pages/InvoicesPage"));
 const PriceBookPage = lazy(() => import("./pages/PriceBookPage"));
 const StatsPage = lazy(() => import("./pages/StatsPage"));
+const ImportPage = lazy(() => import("./pages/ImportPage"));
 const MockCheckoutPage = lazy(() => import("./pages/MockCheckoutPage"));
 const PublicInvoicePage = lazy(() => import("./pages/PublicInvoicePage"));
 const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
@@ -74,6 +75,8 @@ const PRIVATE = [
   ["/reports", ReportsPage, "owner"],
   ["/stats", StatsPage, "owner"],
   ["/settings", SettingsPage, "owner"],
+  // Bring clients and the price book over from Jobber, and download them as CSV files.
+  ["/import", ImportPage, "owner"],
   ["/my-jobs", MyJobsPage, "employee"],
   ["/my-jobs/:id", MyJobDetail, "employee"],
   ["/calendar", CalendarPage, "employee"],

@@ -46,7 +46,9 @@ export default function PriceBookPicker({ onPick, disabled }) {
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-border bg-surface-2/40 p-3">
+    // w-full min-w-0: in the wrapping row of buttons this takes the whole row and no more,
+    // however long an item's description is.
+    <div className="mt-3 w-full min-w-0 rounded-xl border border-border bg-surface-2/40 p-3">
       <div className="flex items-center gap-2">
         <label className="relative block flex-1">
           <span className="sr-only">Search the price book</span>

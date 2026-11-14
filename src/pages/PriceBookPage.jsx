@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { api } from "../api";
 import ErrorMessage from "../components/ErrorMessage";
-import { FormActions, Input, Select } from "../components/Field";
+import { FormActions, Input, Select, TextArea } from "../components/Field";
 import Loading from "../components/Loading";
 import { Badge } from "../components/ui/Badge";
-import { Button } from "../components/ui/Button";
+import { Button, ButtonLink } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { EmptyState } from "../components/ui/Feedback";
 import { DollarIcon, PencilIcon, PlusIcon, SearchIcon } from "../components/ui/Icons";
@@ -111,12 +111,13 @@ function ItemForm({ item, startKind = "service", categories, onSave, onCancel })
           </datalist>
         </div>
       </div>
-      <Input
+      <TextArea
         label="Detail on the line (optional)"
         name="description"
         defaultValue={item?.description || ""}
-        maxLength={200}
-        hint="Added after the name on quotes and invoices."
+        maxLength={2000}
+        rows={3}
+        hint="Added with the name on quotes and invoices. A long one, such as what is included and what is not, goes under the name."
         error={first("description")}
       />
       {other && <ErrorMessage error={error} />}
@@ -181,7 +182,7 @@ function ItemRow({ item, categories, showKind, onChanged }) {
           {showKind && <Badge tone={item.kind === "service" ? "neutral" : "primary"}>{kindLabel(item.kind)}</Badge>}
           {item.archived && <Badge>Hidden</Badge>}
         </p>
-        {item.description && <p className="text-sm text-muted [overflow-wrap:anywhere]">{item.description}</p>}
+        {item.description && <p className="line-clamp-2 text-sm text-muted [overflow-wrap:anywhere]">{item.description}</p>}
       </div>
       <p className="shrink-0 text-sm font-medium tabular-nums">
         {formatMoney(item.unit_price_cents)}
@@ -235,10 +236,15 @@ export default function PriceBookPage() {
         description="Your services, materials, and hourly rates with their usual prices. Add them to quotes and invoices with From price book, and change the price on any line."
         actions={
           !adding && (
-            <Button onClick={() => setAdding(true)}>
-              <PlusIcon />
-              Add item
-            </Button>
+            <>
+              <ButtonLink to="/import" variant="secondary">
+                Import or export
+              </ButtonLink>
+              <Button onClick={() => setAdding(true)}>
+                <PlusIcon />
+                Add item
+              </Button>
+            </>
           )
         }
       />

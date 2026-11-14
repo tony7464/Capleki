@@ -293,7 +293,7 @@ function CatalogPicker({ busy, onPick, onClose }) {
   const shown = useMemo(() => filterPriceBook(items, { query }), [items, query]);
 
   return (
-    <div className="rounded-xl border border-border bg-surface-2/40 p-3">
+    <div className="min-w-0 rounded-xl border border-border bg-surface-2/40 p-3">
       <div className="flex items-center gap-2">
         <label className="relative block flex-1">
           <span className="sr-only">Search price book materials</span>

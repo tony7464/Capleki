@@ -19,6 +19,7 @@ import { BriefcaseIcon, CalendarIcon, InboxIcon, MailIcon, MapPinIcon, PhoneIcon
 import { PageHeader } from "../components/ui/PageHeader";
 import { cx } from "../components/ui/styles";
 import { useAsync } from "../hooks";
+import { clientLabels } from "../utils/clientLabels";
 import { formatDay, formatMoney } from "../utils/format";
 import {
   MAX_NOTES,
@@ -356,8 +357,8 @@ function ClientPicker() {
               <option value="" disabled>
                 Pick a client
               </option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>{client.name}</option>
+              {[...clientLabels(clients)].map(([id, label]) => (
+                <option key={id} value={id}>{label}</option>
               ))}
             </Select>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

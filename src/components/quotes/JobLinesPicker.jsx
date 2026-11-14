@@ -72,7 +72,7 @@ export default function JobLinesPicker({ jobId, onAdd, disabled }) {
   }
 
   return (
-    <div className="mt-3 w-full">
+    <div className="mt-3 w-full min-w-0">
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" size="sm" onClick={addMaterials} disabled={disabled || Boolean(busy)}>
           {busy === "materials" ? "Adding…" : "Add job materials"}
