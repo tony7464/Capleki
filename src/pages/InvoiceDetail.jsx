@@ -104,7 +104,8 @@ function validate(values, items, total, { sending }) {
 
 // --- Draft editor ---------------------------------------------------------------
 
-function InvoiceEditor({ initial, onSave, onSend, onMarkPaid, children }) {
+// jobId: the job this invoice is for, if any, so its materials and clocked hours can be added as lines.
+function InvoiceEditor({ initial, jobId, onSave, onSend, onMarkPaid, children }) {
   const [values, setValues] = useState(initial.values);
   const [items, setItems] = useState(initial.items);
   const [saved, setSaved] = useState(() => snapshot(initial.values, initial.items));
@@ -178,6 +179,7 @@ function InvoiceEditor({ initial, onSave, onSend, onMarkPaid, children }) {
             lineTotals={totals.lineTotals}
             listError={errors.items}
             disabled={disabled}
+            jobId={jobId}
           />
         </Card>
         <Card title="Details">
@@ -829,6 +831,7 @@ function InvoiceView({ id }) {
           <InvoiceEditor
             key={invoice.updated_at}
             initial={formFromInvoice(invoice)}
+            jobId={invoice.job?.id}
             onSave={save}
             onSend={send}
             onMarkPaid={() => setMarkingPaid(true)}

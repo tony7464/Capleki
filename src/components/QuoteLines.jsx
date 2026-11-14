@@ -1,5 +1,7 @@
 import { formatMoney } from "../utils/format";
-import { MAX_DESCRIPTION, MAX_ITEMS, blankItem, formatPercent, formatQuantity, isBlankLine } from "../utils/quotes";
+import { appendLines } from "../utils/priceBook";
+import { MAX_DESCRIPTION, MAX_ITEMS, blankItem, formatPercent, formatQuantity } from "../utils/quotes";
+import JobLinesPicker from "./quotes/JobLinesPicker";
 import PriceBookPicker from "./quotes/PriceBookPicker";
 import { Button } from "./ui/Button";
 import { PlusIcon, XIcon } from "./ui/Icons";
@@ -146,7 +148,8 @@ function ItemRow({ item, index, errors, lineTotal, onChange, onRemove, canRemove
 
 // The line item editor for quotes and invoices: a grid from sm up, stacked cards on phones.
 // priceBook: offer "From price book" (the owner, and crew who can quote, can read it).
-export function ItemsEditor({ items, setItems, itemErrors, lineTotals, listError, disabled, priceBook = true }) {
+// jobId: the job an invoice is for; offers "Add job materials" and "Add clocked hours" (owner only).
+export function ItemsEditor({ items, setItems, itemErrors, lineTotals, listError, disabled, priceBook = true, jobId = null }) {
   return (
     <div>
       <div className="hidden grid-cols-[minmax(0,1fr)_5.5rem_7.5rem_6.5rem_2.25rem] gap-x-2 border-b border-border pb-2 text-xs font-semibold uppercase tracking-wide text-muted sm:grid">
@@ -181,15 +184,22 @@ export function ItemsEditor({ items, setItems, itemErrors, lineTotals, listError
           {priceBook && (
             <PriceBookPicker
               disabled={disabled}
-              onPick={(line) => {
-                // An untouched last line is replaced instead of left empty above the new one.
-                const last = items[items.length - 1];
-                const kept = last && isBlankLine(last) ? items.slice(0, -1) : items;
-                if (kept.length < MAX_ITEMS) setItems([...kept, line]);
-              }}
+              // An untouched last line is replaced instead of left empty above the new one.
+              onPick={(line) => setItems(appendLines(items, [line]).items)}
             />
           )}
         </div>
+      )}
+      {jobId && items.length < MAX_ITEMS && (
+        <JobLinesPicker
+          jobId={jobId}
+          disabled={disabled}
+          onAdd={(lines) => {
+            const next = appendLines(items, lines);
+            if (next.added) setItems(next.items);
+            return next.added;
+          }}
+        />
       )}
     </div>
   );
