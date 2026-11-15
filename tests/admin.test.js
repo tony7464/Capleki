@@ -57,5 +57,10 @@ test("the record reads differently for the admin and for the owner", () => {
   assert.equal(eventText(plan), "Root Owner changed the plan: No plan to Crew, $19.00 a month");
   assert.equal(eventText({ action: "admin_granted", detail: "ann (ann@example.com)" }), "Admin rights given to ann (ann@example.com)");
   assert.equal(eventText({ action: "admin_revoked", detail: null }), "Admin rights taken away");
+
+  const down = { action: "site_unpublished", admin_name: "Root Owner", detail: "/site/ann-co" };
+  assert.equal(eventText(down), "Root Owner took the website down (/site/ann-co)");
+  assert.equal(eventText(down, true), "Support took your website down (/site/ann-co)");
+  assert.equal(eventText({ action: "site_allowed", admin_name: "Root Owner", detail: "/site/ann-co" }, true), "Support allowed your website to be published again (/site/ann-co)");
   assert.equal(eventText({ action: "something_new", detail: null }), "something_new");
 });

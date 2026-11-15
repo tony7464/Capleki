@@ -1,11 +1,17 @@
-# The landing, pricing, terms, and privacy pages are public. Everything else is behind a
-# login, or is a customer's private link (quotes, pay pages, request forms, invites).
+# The landing, pricing, terms, and privacy pages are public, and so are the websites
+# businesses publish (/site/...). A website is drawn in the browser, so reading one also
+# takes the app's scripts (/assets/) and the page's data (/api/public/sites/).
+# Everything else is behind a login, or is a customer's private link (quotes, pay pages,
+# request forms, invites).
 User-agent: *
 Allow: /$
 Allow: /pricing
 Allow: /terms
 Allow: /privacy
 Allow: /marketing/
+Allow: /site/
+Allow: /assets/
+Allow: /api/public/sites/
 Disallow: /
 
 Sitemap: https://crewjobtrack.com/sitemap.xml

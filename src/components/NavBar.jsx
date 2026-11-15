@@ -32,6 +32,7 @@ const OWNER_LINKS = [
   ["/timesheets", "Timesheets"],
   ["/reports", "Reports"],
   ["/stats", "Statistics"],
+  ["/website", "Website"],
 ];
 
 // The owner's top bar has no room for every link, so related links share a small

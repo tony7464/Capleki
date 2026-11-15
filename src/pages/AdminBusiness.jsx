@@ -122,6 +122,61 @@ function PlanCard({ business, onChanged }) {
   );
 }
 
+// The business's public website: where it is, and taking it down when it should not be on this address.
+function SiteCard({ business, onChanged }) {
+  const { site } = business;
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function act(what) {
+    setBusy(true);
+    setError(null);
+    try {
+      onChanged(await api(`/api/admin/businesses/${business.id}/site/${what}`, { method: "POST" }));
+      setConfirming(false);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title="Website" description="The public site this business built. Taking it down keeps what they built, and they cannot publish it again until you allow it.">
+      <div className="space-y-3">
+        <p className="flex flex-wrap items-center gap-2 text-sm text-fg">
+          {site.published ? (
+            <a href={site.url} target="_blank" rel="noreferrer" className="link [overflow-wrap:anywhere]">{site.url.replace(/^https?:\/\//, "")}</a>
+          ) : (
+            <span className="[overflow-wrap:anywhere]">{site.url.replace(/^https?:\/\//, "")}</span>
+          )}
+          {site.taken_down ? <Badge tone="danger">Taken down</Badge> : site.published ? <Badge tone="success">Live</Badge> : <Badge>Not published</Badge>}
+        </p>
+        {site.published && <p className="text-xs text-muted">Published {formatWhen(site.published_at)}</p>}
+        {error && <ErrorMessage error={error} />}
+        {site.taken_down ? (
+          <Button variant="secondary" size="sm" disabled={busy} onClick={() => act("allow")}>
+            {busy ? "Working…" : "Allow publishing again"}
+          </Button>
+        ) : confirming ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-fg">Take this website down? The owner is told in their Settings.</span>
+            <Button variant="danger" size="sm" disabled={busy} onClick={() => act("unpublish")}>
+              {busy ? "Working…" : "Yes, take it down"}
+            </Button>
+            <Button variant="ghost" size="sm" disabled={busy} onClick={() => setConfirming(false)}>Cancel</Button>
+          </div>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={() => setConfirming(true)}>
+            {site.published ? "Take the site down" : "Block publishing"}
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 function PersonRow({ business, person, onSent }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
@@ -243,6 +298,7 @@ export default function AdminBusiness() {
         <Overview business={business} />
         <SupportViewCard business={business} />
         <PlanCard business={business} onChanged={setData} />
+        {business.site && <SiteCard business={business} onChanged={setData} />}
         <Card title="People" description="Email someone a link to choose a new password. You never see the link or a password.">
           <ul className="-my-3 divide-y divide-border">
             {business.people.map((person) => (

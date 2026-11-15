@@ -83,6 +83,10 @@ export function eventText(event, forOwner = false) {
       return `${who} sent a password reset email${trailing(event.detail)}`;
     case "plan_changed":
       return `${who} changed the plan${event.detail ? `: ${event.detail.replace(" -> ", " to ")}` : ""}`;
+    case "site_unpublished":
+      return `${who} took ${forOwner ? "your website" : "the website"} down${event.detail ? ` (${event.detail})` : ""}`;
+    case "site_allowed":
+      return `${who} allowed ${forOwner ? "your website" : "the website"} to be published again${event.detail ? ` (${event.detail})` : ""}`;
     case "admin_granted":
       return `Admin rights given${event.detail ? ` to ${event.detail}` : ""}`;
     case "admin_revoked":

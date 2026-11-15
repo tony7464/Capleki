@@ -45,6 +45,9 @@ const StatsPage = lazy(() => import("./pages/StatsPage"));
 const ImportPage = lazy(() => import("./pages/ImportPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const AdminBusiness = lazy(() => import("./pages/AdminBusiness"));
+// A business's website: the editor (it loads the drag-and-drop library) and the pages visitors see.
+const WebsitePage = lazy(() => import("./pages/WebsitePage"));
+const PublicSitePage = lazy(() => import("./pages/PublicSitePage"));
 const MockCheckoutPage = lazy(() => import("./pages/MockCheckoutPage"));
 const PublicInvoicePage = lazy(() => import("./pages/PublicInvoicePage"));
 const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
@@ -116,6 +119,8 @@ export default function App() {
   const publicPay = useMatch("/pay/:token/*");
   const publicInvite = useMatch("/invite/:token");
   const verifyEmail = useMatch("/verify-email");
+  const publicSite = useMatch("/site/:slug/*");
+  const websiteEditor = useMatch("/website/*");
   // The marketing pages have their own header and footer.
   const landing = useMatch("/");
   const pricing = useMatch("/pricing");
@@ -129,6 +134,30 @@ export default function App() {
           <Route path="/pricing" element={<LandingPage section="pricing" />} />
           <Route path="/terms" element={<LegalPage page="terms" />} />
           <Route path="/privacy" element={<LegalPage page="privacy" />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+  // A business's website is its own thing: no app menu around it.
+  if (publicSite) {
+    return (
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          <Route path="/site/:slug" element={<PublicSitePage />} />
+          <Route path="/site/:slug/:page" element={<PublicSitePage />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+  // The website editor fills the screen, and so does the owner's preview of their drafts.
+  if (websiteEditor) {
+    return (
+      <Suspense fallback={<Loading />}>
+        <SupportViewBanner />
+        <Routes>
+          <Route path="/website" element={<ProtectedRoute allow="owner"><WebsitePage /></ProtectedRoute>} />
+          <Route path="/website/preview" element={<ProtectedRoute allow="owner"><PublicSitePage preview /></ProtectedRoute>} />
+          <Route path="/website/preview/:page" element={<ProtectedRoute allow="owner"><PublicSitePage preview /></ProtectedRoute>} />
         </Routes>
       </Suspense>
     );
