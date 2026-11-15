@@ -12,6 +12,7 @@ import { Modal } from "../ui/Modal";
 import Legend from "./Legend";
 import { JobQuickView, LunchQuickView } from "./QuickViews";
 import TeamDay from "./TeamDay";
+import DayDriveTimes from "../DayDriveTimes";
 import { createJob as addJob } from "../../utils/series";
 
 // FullCalendar is the largest dependency; load it only on pages with a calendar.
@@ -98,6 +99,15 @@ function PrefsToast({ prefs }) {
 // is the compact owner calendar. Both share the saved show/hide toggles.
 // reloadKey: bump to refetch after a change made elsewhere on the page.
 // onChanged: called after a job is created or moved, so the page can refresh its totals.
+// What decides a day's drives: which jobs, when, how long, where, and who. When any of it
+// changes (a job is moved or reassigned), the drives are worked out again.
+function dayJobsKey(jobs, day) {
+  return (jobs || [])
+    .filter((job) => job.date === day)
+    .map((job) => [job.id, job.time, job.duration_minutes, job.status, job.client_id, job.assignees.map((person) => person.id).join("+")].join(":"))
+    .join(",");
+}
+
 export default function TeamSchedule({ mode, variant, timezone, selfId, reloadKey = 0, onChanged }) {
   const page = variant === "page";
   const owner = mode === "owner";
@@ -168,17 +178,22 @@ export default function TeamSchedule({ mode, variant, timezone, selfId, reloadKe
   const customViews = page
     ? {
         teamDay: ({ day, today, now }) => (
-          <TeamDay
-            day={day}
-            today={today}
-            now={now}
-            data={schedule.data}
-            hidden={hidden}
-            mode={mode}
-            onJobClick={(job) => setDialog({ type: "job", job })}
-            onLunchClick={(lunch) => setDialog({ type: "lunch", lunch })}
-            onCreate={owner ? startCreate : undefined}
-          />
+          <>
+            <TeamDay
+              day={day}
+              today={today}
+              now={now}
+              data={schedule.data}
+              hidden={hidden}
+              mode={mode}
+              onJobClick={(job) => setDialog({ type: "job", job })}
+              onLunchClick={(lunch) => setDialog({ type: "lunch", lunch })}
+              onCreate={owner ? startCreate : undefined}
+            />
+            <div className="mt-4">
+              <DayDriveTimes date={day} team refreshKey={dayJobsKey(schedule.data?.jobs, day)} />
+            </div>
+          </>
         ),
       }
     : undefined;

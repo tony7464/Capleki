@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
 import { useAsync } from "../hooks";
+import { driveText, locationProblem, suggestEta } from "../utils/driveTime";
 import ErrorMessage from "./ErrorMessage";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
@@ -25,6 +26,32 @@ export default function OnMyWayCard({ jobId, onSent }) {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
   const [result, setResult] = useState(null);
+  // The drive from where this person is: null, "finding", { leg } or { problem }.
+  const [drive, setDrive] = useState(null);
+
+  // Ask the device where it is, get the drive from there, and pick the arrival time that
+  // fits. The location is used for this one answer; the server does not keep it.
+  function fromHere() {
+    if (!navigator.geolocation) {
+      setDrive({ problem: "This device cannot share its location. Pick a time yourself." });
+      return;
+    }
+    setDrive("finding");
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const body = { lat: position.coords.latitude, lng: position.coords.longitude };
+          const leg = await api(`/api/jobs/${jobId}/drive_time`, { method: "POST", body });
+          setDrive({ leg });
+          setEta(suggestEta(leg.minutes, data.eta_choices));
+        } catch (err) {
+          setDrive({ problem: err.data?.errors?.address?.[0] || err.data?.errors?.drive?.[0] || err.message });
+        }
+      },
+      (failure) => setDrive({ problem: locationProblem(failure.code) }),
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
+    );
+  }
 
   if (error) return null;
   if (!data || !data.can_send) return null;
@@ -73,6 +100,18 @@ export default function OnMyWayCard({ jobId, onSent }) {
                 {minutes} min
               </button>
             ))}
+          </div>
+          <div className="mt-2 text-xs text-muted">
+            <button type="button" className="link" onClick={fromHere} disabled={drive === "finding"}>
+              {drive === "finding" ? "Finding the drive from here…" : "Use my location to pick the time"}
+            </button>
+            {drive?.leg && (
+              <p className="mt-1" role="status">
+                From where you are: {driveText(drive.leg)}, without traffic. Picked {eta} min; change it if you need to.
+              </p>
+            )}
+            {drive?.problem && <p className="mt-1 font-medium text-danger">{drive.problem}</p>}
+            {!drive && <p className="mt-1">Your location is used once to work out the drive. It is not saved.</p>}
           </div>
         </fieldset>
         {channels.sms && channels.email && (
