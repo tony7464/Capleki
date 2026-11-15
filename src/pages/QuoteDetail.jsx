@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, fetchAll } from "../api";
 import ConfirmDelete from "../components/ConfirmDelete";
 import ErrorMessage from "../components/ErrorMessage";
+import TaxRateHelper from "../components/tax/TaxRateHelper";
 import { Input, Select, TextArea } from "../components/Field";
 import CopyLink from "../components/CopyLink";
 import CreateInvoiceButton from "../components/CreateInvoiceButton";
@@ -112,8 +113,10 @@ function validate(values, items, { sending }) {
   return { errors, itemErrors };
 }
 
-function QuoteEditor({ initial, onSave, onSend, saveLabel, sendBlocked, children }) {
+// isNew: a quote that has not been saved yet, which starts with the saved tax rate for its ZIP code.
+function QuoteEditor({ initial, onSave, onSend, saveLabel, sendBlocked, isNew = false, children }) {
   const [values, setValues] = useState(initial.values);
+  const fillTaxRate = useCallback((rate) => setValues((current) => ({ ...current, tax_rate: rate })), []);
   const [items, setItems] = useState(initial.items);
   const [saved, setSaved] = useState(() => snapshot(initial.values, initial.items));
   const [errors, setErrors] = useState({});
@@ -288,6 +291,13 @@ function QuoteEditor({ initial, onSave, onSend, saveLabel, sendBlocked, children
             </span>
           </label>
           {errors.tax_rate && <p className="-mt-3 mb-3 text-right text-xs font-medium text-danger">{errors.tax_rate}</p>}
+          <TaxRateHelper
+            address={values.customer_address}
+            value={values.tax_rate}
+            onUse={fillTaxRate}
+            disabled={disabled}
+            autoFill={isNew}
+          />
           <QuoteTotals
             subtotal={totals.subtotal}
             tax={totals.tax}
@@ -422,6 +432,7 @@ function NewQuoteFrom({ kind, sourceId }) {
         </Alert>
       )}
       <QuoteEditor
+        isNew
         initial={initial}
         saveLabel="Save draft"
         sendBlocked={archived ? "This client is archived." : null}

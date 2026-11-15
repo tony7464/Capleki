@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import ConfirmDelete from "../components/ConfirmDelete";
 import CopyLink from "../components/CopyLink";
 import EmailSendResult from "../components/EmailSendResult";
 import ErrorMessage from "../components/ErrorMessage";
+import TaxRateHelper from "../components/tax/TaxRateHelper";
 import { Input, Select, TextArea } from "../components/Field";
 import Loading from "../components/Loading";
 import { ItemsEditor, QuoteItems, QuoteTotals } from "../components/QuoteLines";
@@ -107,6 +108,7 @@ function validate(values, items, total, { sending }) {
 // jobId: the job this invoice is for, if any, so its materials and clocked hours can be added as lines.
 function InvoiceEditor({ initial, jobId, onSave, onSend, onMarkPaid, children }) {
   const [values, setValues] = useState(initial.values);
+  const fillTaxRate = useCallback((rate) => setValues((current) => ({ ...current, tax_rate: rate })), []);
   const [items, setItems] = useState(initial.items);
   const [saved, setSaved] = useState(() => snapshot(initial.values, initial.items));
   const [errors, setErrors] = useState({});
@@ -271,6 +273,7 @@ function InvoiceEditor({ initial, jobId, onSave, onSend, onMarkPaid, children })
             </span>
           </label>
           {errors.tax_rate && <p className="-mt-3 mb-3 text-right text-xs font-medium text-danger">{errors.tax_rate}</p>}
+          <TaxRateHelper address={values.customer_address} value={values.tax_rate} onUse={fillTaxRate} disabled={disabled} />
           <QuoteTotals
             subtotal={totals.subtotal}
             tax={totals.tax}
