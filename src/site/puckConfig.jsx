@@ -1,5 +1,7 @@
 import BlockBoundary from "./BlockBoundary";
 import * as blocks from "./blocks";
+import { PhotoField, PhotosField } from "./photoFields";
+import { RichInlineMenu, RichMenu } from "./RichMenu";
 import SiteFrame from "./SiteFrame";
 
 // The editor's list of blocks: for each one, the settings an owner can change (fields),
@@ -15,6 +17,55 @@ const ALIGN = {
     { label: "Center", value: "center" },
   ],
 };
+
+// How the editor draws a photo setting. Made once: the editor keeps the first one it is given.
+const drawPhoto = (props) => <PhotoField {...props} />;
+const drawPhotos = (props) => <PhotosField {...props} />;
+
+// A setting that holds one of the site's photos, picked from the site's own collection.
+function photo(label) {
+  return { type: "custom", label, render: drawPhoto };
+}
+
+// Two facts about where the cursor is, for the Link tool: whether it is on a link, and
+// whether a link can be made (words are selected, or the cursor is on a link already).
+function linkState({ editor }, readOnly) {
+  if (!editor || editor.isDestroyed) return {};
+  const isLink = editor.isActive("link");
+  return { isLink, canLink: !readOnly && (isLink || !editor.state.selection.empty) };
+}
+
+// Formatted text: bold, italic, underline, lists and links, typed on the page itself or
+// in the side panel. Everything else the editor could do is switched off, and the server
+// keeps nothing else (server/site_rich_text.py).
+const RICH_OPTIONS = {
+  heading: false,
+  blockquote: false,
+  code: false,
+  codeBlock: false,
+  horizontalRule: false,
+  strike: false,
+  textAlign: false,
+  // In the editor a click on a link puts the cursor there; it does not leave the page. And a
+  // link is written exactly as the server keeps it (an address, nothing more), so text read
+  // back from the server is the editor's own form and it does not re-read it (which would
+  // squeeze runs of spaces together).
+  link: { openOnClick: false, defaultProtocol: "https", HTMLAttributes: { target: null, rel: null, class: null } },
+};
+
+// typeOnPage: whether the words can be typed on the page itself. Not for someone who may only look.
+function rich(label, typeOnPage) {
+  return {
+    type: "richtext",
+    label,
+    // Has to be said outright, either way.
+    contentEditable: typeOnPage,
+    options: RICH_OPTIONS,
+    tiptap: { selector: linkState },
+    renderMenu: RichMenu,
+    renderInlineMenu: RichInlineMenu,
+  };
+}
 
 const ACTIONS = [
   { label: "The request a quote form", value: "request" },
@@ -69,9 +120,11 @@ function draw(Block) {
 }
 
 // pages: the site's pages ({ slug, title }), for "go to another page". current: the address
-// of the page being edited, to mark it in the menu.
-export function buildConfig({ pages, current }) {
+// of the page being edited, to mark it in the menu. lookOnly: for someone who may look and
+// change nothing (an admin's support view).
+export function buildConfig({ pages, current, lookOnly = false }) {
   const link = linkFields(pages);
+  const words = rich("Words", !lookOnly);
   const heroFields = {
     title: { type: "text", label: "Headline" },
     text: { type: "textarea", label: "Words under it" },
@@ -86,6 +139,23 @@ export function buildConfig({ pages, current }) {
         { label: "Plain", value: "plain" },
       ],
     },
+    image: photo("A photo behind the words (optional)"),
+  };
+  const photoTextFields = {
+    image: photo("Photo"),
+    alt: { type: "text", label: "What the photo shows, for people who cannot see it" },
+    side: {
+      type: "radio",
+      label: "Photo on the",
+      options: [
+        { label: "Left", value: "left" },
+        { label: "Right", value: "right" },
+      ],
+    },
+    title: { type: "text", label: "Heading" },
+    html: words,
+    buttonLabel: { type: "text", label: "Button words (empty for no button)" },
+    ...link,
   };
   const buttonFields = {
     label: { type: "text", label: "Button words" },
@@ -110,6 +180,7 @@ export function buildConfig({ pages, current }) {
     categories: {
       top: { title: "Start of a page", components: ["Hero", "Heading"] },
       content: { title: "Words and lists", components: ["Text", "Services", "Features", "Reviews", "Faq"] },
+      photos: { title: "Photos", components: ["Image", "PhotoText", "Gallery"] },
       action: { title: "Getting in touch", components: ["RequestQuote", "Contact", "Button"] },
       layout: { title: "Layout", components: ["Columns", "Spacer", "Divider"] },
     },
@@ -127,6 +198,7 @@ export function buildConfig({ pages, current }) {
           href: "",
           align: "center",
           tone: "brand",
+          image: "",
         },
         render: draw(blocks.Hero),
       },
@@ -150,7 +222,7 @@ export function buildConfig({ pages, current }) {
       Text: {
         label: "Text",
         fields: {
-          text: { type: "textarea", label: "Words (leave an empty line between paragraphs)" },
+          html: words,
           align: ALIGN,
           size: {
             type: "radio",
@@ -161,8 +233,72 @@ export function buildConfig({ pages, current }) {
             ],
           },
         },
-        defaultProps: { text: "Write something here.", align: "left", size: "normal" },
+        defaultProps: { html: "<p>Write something here.</p>", align: "left", size: "normal" },
         render: draw(blocks.Text),
+      },
+      Image: {
+        label: "Photo",
+        fields: {
+          image: photo("Photo"),
+          alt: { type: "text", label: "What the photo shows, for people who cannot see it" },
+          caption: { type: "text", label: "Words under it (optional)" },
+          size: {
+            type: "radio",
+            label: "Width",
+            options: [
+              { label: "Full", value: "wide" },
+              { label: "Medium", value: "medium" },
+              { label: "Small", value: "small" },
+            ],
+          },
+          shape: {
+            type: "radio",
+            label: "Shape",
+            options: [
+              { label: "As it is", value: "natural" },
+              { label: "Wide", value: "landscape" },
+              { label: "Square", value: "square" },
+            ],
+          },
+          align: ALIGN,
+        },
+        defaultProps: { image: "", alt: "", caption: "", size: "wide", shape: "natural", align: "center" },
+        render: draw(blocks.Image),
+      },
+      PhotoText: {
+        label: "Photo with words",
+        fields: photoTextFields,
+        resolveFields: withLink(photoTextFields, pages),
+        defaultProps: {
+          image: "",
+          alt: "",
+          side: "left",
+          title: "A little about us",
+          html: "<p>Say something about the photo, or about your business.</p>",
+          buttonLabel: "",
+          action: "request",
+          page: "",
+          href: "",
+        },
+        render: draw(blocks.PhotoText),
+      },
+      Gallery: {
+        label: "Photo gallery",
+        fields: {
+          title: { type: "text", label: "Heading" },
+          items: { type: "custom", label: "Photos", render: drawPhotos },
+          columns: {
+            type: "radio",
+            label: "Across the page",
+            options: [
+              { label: "2", value: 2 },
+              { label: "3", value: 3 },
+              { label: "4", value: 4 },
+            ],
+          },
+        },
+        defaultProps: { title: "Our work", items: [], columns: 3 },
+        render: draw(blocks.Gallery),
       },
       Services: {
         label: "Services",

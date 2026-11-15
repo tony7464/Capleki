@@ -128,6 +128,27 @@ function Businesses() {
   );
 }
 
+// Web addresses of their own that owners asked for and nobody has connected yet.
+function WaitingAddresses() {
+  const { data } = useAsync(api, "/api/admin/site-domains");
+  if (!data?.waiting.length) return null;
+  return (
+    <Card
+      title="Web addresses waiting to be connected"
+      description="An owner asked to use an address of their own. Open the business to see whether they have proved it is theirs. If so, add it to the web service at the host, wait for its certificate, and press Connect."
+    >
+      <ul className="-my-2 divide-y divide-border">
+        {data.waiting.map((entry) => (
+          <li key={entry.business_id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 py-2 text-sm">
+            <Link to={`/admin/businesses/${entry.business_id}`} className="link min-w-0 [overflow-wrap:anywhere]">{entry.domain}</Link>
+            <span className="text-muted [overflow-wrap:anywhere]">{entry.business_name}</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 function RecentActivity() {
   const { data, error } = useAsync(api, "/api/admin/events?per_page=15");
   if (error) return <ErrorMessage error={error} />;
@@ -169,6 +190,7 @@ export default function AdminPage() {
         description="Every business that has signed up. You see who they are and how big they are, not their customers or jobs. To see what an owner sees, they turn on support access first."
       />
       <div className="space-y-6">
+        <WaitingAddresses />
         <Businesses />
         <RecentActivity />
       </div>

@@ -1,11 +1,16 @@
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { apiUrl } from "../api";
 import { cx } from "../components/ui/styles";
+import RichText from "./RichText";
 import { useSite } from "./SiteContext";
-import { linkProblem, mailHref, paragraphs, priceText, resolveLink, telHref } from "./siteUtils";
+import { linkProblem, mailHref, paragraphs, photoPath, priceText, resolveLink, telHref } from "./siteUtils";
 
 // The blocks a business's website is made of. Each one draws plain data (see
 // server/site_content.py): every piece of text is printed as text, and a link is only
-// ever one that resolveLink or safeHref allows. No block uses raw HTML.
+// ever one that resolveLink or safeHref allows. No block uses raw HTML: formatted text
+// is drawn piece by piece (RichText.jsx, richParse.js), and a photo is one of the site's own, named
+// by its id.
 //
 // Colors and the font come from CSS variables set on the site's outer element
 // (themeVars in siteUtils.js), so the same blocks follow each site's own look.
@@ -18,6 +23,9 @@ function listOf(items) {
 }
 
 const HEADING = "[font-family:inherit] font-bold tracking-tight";
+// How a link that leaves the site is marked: it opens apart from the site, tells the other
+// site nothing, and is the business's own link, not one the app vouches for.
+const OUTSIDE_LINK = "noopener noreferrer nofollow ugc";
 const ALIGN = { left: "text-left", center: "text-center" };
 
 function Section({ tone = "plain", narrow = false, children }) {
@@ -86,9 +94,9 @@ export function SiteButton({ link, label, variant = "solid", onBrand = false }) 
       </Link>
     );
   }
-  const web = target.href.startsWith("http");
+  const web = /^https?:/i.test(target.href);
   return (
-    <a href={target.href} className={className} style={style} {...(web ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+    <a href={target.href} className={className} style={style} {...(web ? { target: "_blank", rel: OUTSIDE_LINK } : {})}>
       {label}
     </a>
   );
@@ -105,19 +113,83 @@ function EditorHint({ children }) {
   );
 }
 
-export function Hero({ title, text, buttonLabel, action, href, page, align = "center", tone = "brand" }) {
+// Whether id names a photo of this site's collection. Anything else is not drawn.
+function useHasPhoto(id) {
+  const { site } = useSite();
+  return Boolean(id && site.images && Object.hasOwn(site.images, id));
+}
+
+// A photo of the site's collection, by its id. Nothing when the site has no such photo.
+// small: the smaller copy, for grids and the header. Its real size is given to the
+// browser up front, so the page does not jump when the photo arrives.
+export function Photo({ id, alt = "", small = false, eager = false, className, style }) {
+  const { site } = useSite();
+  const has = useHasPhoto(id);
+  const src = photoPath(id, small ? "thumb" : undefined);
+  if (!src || !has) return null;
+  const { width, height } = site.images[id];
+  return (
+    <img
+      src={apiUrl(src)}
+      alt={typeof alt === "string" ? alt : ""}
+      width={width}
+      height={height}
+      loading={eager ? "eager" : "lazy"}
+      decoding="async"
+      className={className}
+      style={style}
+    />
+  );
+}
+
+// How formatted text looks: paragraphs apart, lists with their dots and numbers, links in
+// the site's color. The same for the editor's own text box and for the live site.
+const RICH =
+  "[&_p]:min-h-[1em] [&_p]:whitespace-pre-wrap [&_p+p]:mt-4 [&_p+ul]:mt-3 [&_p+ol]:mt-3 [&_ul+p]:mt-4 [&_ol+p]:mt-4 " +
+  "[&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_li]:my-1 [&_li_p]:m-0 [&_li>ul]:mt-1 [&_li>ol]:mt-1 " +
+  "[&_strong]:font-semibold [&_a]:underline [&_a]:[color:var(--site-accent)] [&_a]:[overflow-wrap:anywhere]";
+
+// Formatted text from a block's settings. On the live site it is the server's text
+// (a string); in the editor it is the editor's own text box, already drawn.
+function Rich({ html, className, style }) {
+  const { editing } = useSite();
+  // Outside the editor only text is ever drawn, and only through RichText.
+  const drawn = typeof html === "string" ? html && <RichText html={html} /> : editing ? html : null;
+  if (!drawn) return null;
+  return (
+    <div className={cx(RICH, className)} style={style}>
+      {drawn}
+    </div>
+  );
+}
+
+export function Hero({ title, text, buttonLabel, action, href, page, align = "center", tone = "brand", image }) {
   const brand = tone === "brand";
+  const photo = useHasPhoto(image);
   return (
     <section
-      className="px-4 py-16 sm:px-6 sm:py-24"
-      style={brand ? { background: "var(--site-color)", color: "var(--site-on-color)" } : { background: "var(--site-alt)" }}
+      className={cx("px-4 py-16 sm:px-6 sm:py-24", photo && "relative isolate overflow-hidden sm:py-32")}
+      style={
+        photo
+          ? { color: "#ffffff", background: "#0f172a" }
+          : brand
+            ? { background: "var(--site-color)", color: "var(--site-on-color)" }
+            : { background: "var(--site-alt)" }
+      }
     >
+      {photo && (
+        <>
+          {/* Behind the words, darkened so they read on any photo. */}
+          <Photo id={image} eager className="absolute inset-0 -z-20 h-full w-full object-cover" />
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-black/55" />
+        </>
+      )}
       <div className={cx("mx-auto max-w-3xl", ALIGN[align])}>
         <h1 className={cx(HEADING, "text-4xl sm:text-5xl")}>{title}</h1>
         {text && <p className="mt-4 whitespace-pre-line text-lg opacity-90">{text}</p>}
         {buttonLabel && (
           <div className="mt-8">
-            <SiteButton link={{ action, href, page }} label={buttonLabel} onBrand={brand} />
+            <SiteButton link={{ action, href, page }} label={buttonLabel} onBrand={brand && !photo} />
           </div>
         )}
       </div>
@@ -134,14 +206,152 @@ export function Heading({ text, level = 2, align = "left" }) {
   );
 }
 
-export function Text({ text, align = "left", size = "normal" }) {
-  const parts = paragraphs(text);
+// html: formatted text. text: the plain words of a block made before formatted text,
+// shown until the owner next edits the page (the editor moves them to html).
+export function Text({ html, text, align = "left", size = "normal" }) {
+  const sized = cx("mx-auto max-w-5xl", size === "large" ? "text-lg sm:text-xl" : "text-base", ALIGN[align]);
+  const parts = html ? [] : paragraphs(typeof text === "string" ? text : "");
   return (
     <div className="px-4 py-4 sm:px-6">
-      <div className={cx("mx-auto max-w-5xl space-y-4", size === "large" ? "text-lg sm:text-xl" : "text-base", ALIGN[align])} style={{ color: "var(--site-muted)" }}>
-        {parts.length ? parts.map((part, index) => <p key={index} className="whitespace-pre-line">{part}</p>) : <EditorHint>Write something here.</EditorHint>}
+      {html ? (
+        <Rich html={html} className={sized} style={{ color: "var(--site-muted)" }} />
+      ) : (
+        <div className={cx(sized, "space-y-4")} style={{ color: "var(--site-muted)" }}>
+          {parts.length ? parts.map((part, index) => <p key={index} className="whitespace-pre-line">{part}</p>) : <EditorHint>Write something here.</EditorHint>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const PHOTO_WIDTH = { small: "max-w-sm", medium: "max-w-2xl", wide: "max-w-5xl" };
+const PHOTO_SHAPE = { natural: "h-auto", landscape: "aspect-video object-cover", square: "aspect-square object-cover" };
+
+export function Image({ image, alt, caption, size = "wide", shape = "natural", align = "center" }) {
+  const { editing } = useSite();
+  const has = useHasPhoto(image);
+  if (!has && !editing) return null;
+  return (
+    <div className="px-4 py-4 sm:px-6">
+      <div className="mx-auto max-w-5xl">
+        <figure className={cx(PHOTO_WIDTH[size] || PHOTO_WIDTH.wide, align === "center" && "mx-auto")}>
+          {has ? (
+            <Photo id={image} alt={alt} className={cx("w-full rounded-2xl", PHOTO_SHAPE[shape] || PHOTO_SHAPE.natural)} />
+          ) : (
+            <EditorHint>Pick a photo in the panel on the right.</EditorHint>
+          )}
+          {caption && has && (
+            <figcaption className="mt-2 whitespace-pre-line text-sm" style={{ color: "var(--site-muted)" }}>{caption}</figcaption>
+          )}
+        </figure>
       </div>
     </div>
+  );
+}
+
+// One photo of a gallery, large, over the page. Arrow keys and the buttons go to the
+// next and the last; Escape, the close button, or a click beside the photo closes it.
+function BigPhoto({ list, index, onIndex, onClose }) {
+  const dialog = useRef(null);
+  const item = list[index];
+  const step = (by) => onIndex((index + by + list.length) % list.length);
+
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element.open) element.showModal();
+    return () => element.close();
+  }, []);
+
+  const button = "inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-white/15 px-3 text-base font-semibold text-white hover:bg-white/25";
+  return (
+    <dialog
+      ref={dialog}
+      aria-label="Photo"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      onKeyDown={(event) => {
+        if (list.length < 2) return;
+        if (event.key === "ArrowRight") step(1);
+        if (event.key === "ArrowLeft") step(-1);
+      }}
+      className="m-0 h-dvh max-h-none w-screen max-w-none bg-black/90 p-4 text-white backdrop:bg-black/80"
+    >
+      <div className="pointer-events-none flex h-full flex-col items-center justify-center gap-3">
+        <Photo id={item.image} alt={item.caption} eager className="pointer-events-auto max-h-[78dvh] w-auto max-w-full rounded-lg object-contain" />
+        {item.caption && <p className="pointer-events-auto max-w-2xl text-center text-sm">{item.caption}</p>}
+        <div className="pointer-events-auto flex items-center gap-3">
+          {list.length > 1 && <button type="button" className={button} onClick={() => step(-1)} aria-label="The photo before">‹</button>}
+          <button type="button" className={button} onClick={onClose}>Close</button>
+          {list.length > 1 && <button type="button" className={button} onClick={() => step(1)} aria-label="The next photo">›</button>}
+        </div>
+      </div>
+    </dialog>
+  );
+}
+
+const GALLERY = { 2: "grid-cols-2", 3: "grid-cols-2 md:grid-cols-3", 4: "grid-cols-2 md:grid-cols-4" };
+
+export function Gallery({ title, items, columns = 3 }) {
+  const { site, editing } = useSite();
+  const [open, setOpen] = useState(null);
+  // Only photos the site still has. One that was deleted leaves no gap.
+  const list = listOf(items).filter((item) => item && site.images && Object.hasOwn(site.images, item.image));
+  if (!list.length && !editing) return null;
+  return (
+    <Section>
+      <Title align="center">{title}</Title>
+      {list.length ? (
+        <ul className={cx("grid gap-3", GALLERY[columns] || GALLERY[3])}>
+          {list.map((item, index) => (
+            <li key={`${item.image}-${index}`}>
+              <button
+                type="button"
+                onClick={editing ? undefined : () => setOpen(index)}
+                aria-label={`Open photo ${index + 1}${item.caption ? `: ${item.caption}` : ""}`}
+                className="block aspect-square w-full overflow-hidden rounded-xl"
+              >
+                <Photo id={item.image} alt={item.caption} small className="h-full w-full object-cover transition-transform duration-200 hover:scale-105" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <EditorHint>Add photos in the panel on the right.</EditorHint>
+      )}
+      {open !== null && list[open] && <BigPhoto list={list} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />}
+    </Section>
+  );
+}
+
+// A photo with words beside it. On a phone the photo comes first.
+export function PhotoText({ image, alt, title, html, side = "left", buttonLabel, action, href, page }) {
+  const { editing } = useSite();
+  const has = useHasPhoto(image);
+  return (
+    <Section>
+      <div className={cx("grid items-center gap-8", (has || editing) && "md:grid-cols-2")}>
+        {(has || editing) && (
+          <div className={cx(side === "right" && "md:order-2")}>
+            {/* A tall photo is cut to a sensible height, so it does not tower over the words beside it. */}
+            {has ? <Photo id={image} alt={alt} className="h-auto max-h-[34rem] w-full rounded-2xl object-cover" /> : <EditorHint>Pick a photo in the panel on the right.</EditorHint>}
+          </div>
+        )}
+        <div className="min-w-0">
+          {title && <h2 className={cx(HEADING, "mb-4 text-2xl sm:text-3xl")}>{title}</h2>}
+          <Rich html={html} style={{ color: "var(--site-muted)" }} />
+          {buttonLabel && (
+            <div className="mt-6">
+              <SiteButton link={{ action, href, page }} label={buttonLabel} />
+            </div>
+          )}
+        </div>
+      </div>
+    </Section>
   );
 }
 

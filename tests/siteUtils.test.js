@@ -180,3 +180,28 @@ test("a new site starts with four pages of blocks the site knows", () => {
   assert.match(pages[0].data.content[0].props.title, /Ann Co/);
   assert.match(starterPages("").at(0).data.content[0].props.title, /our business/);
 });
+
+test("a site's pages are found wherever the site lives", () => {
+  const site = { slug: "ann-co" };
+  assert.equal(pagePath(site, ""), "/site/ann-co");
+  assert.equal(pagePath(site, "about"), "/site/ann-co/about");
+  // The owner's preview of drafts.
+  assert.equal(pagePath({ ...site, base: "/website/preview" }, "about"), "/website/preview/about");
+  // The business's own web address: the home page is the address itself.
+  assert.equal(pagePath({ ...site, base: "" }, ""), "/");
+  assert.equal(pagePath({ ...site, base: "" }, "about"), "/about");
+});
+
+test("a new site's text is formatted text, and its settings have a place for a logo and a description", () => {
+  const text = starterPages("Ann Co").flatMap((page) => page.data.content).filter((block) => block.type === "Text");
+  assert.ok(text.length >= 2);
+  for (const block of text) {
+    assert.match(block.props.html, /^<p>.*<\/p>$/);
+    assert.equal("text" in block.props, false);
+  }
+  const settings = withDefaults({});
+  assert.deepEqual([settings.logo, settings.logo_only, settings.description], ["", false, ""]);
+  // Links keep out what cannot be seen, as the server does.
+  assert.equal(safeHref("https://exam\u0001ple.com/"), null);
+  assert.equal(webHref("exam\u0000ple.com"), null);
+});

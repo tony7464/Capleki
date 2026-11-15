@@ -172,8 +172,81 @@ function SiteCard({ business, onChanged }) {
             {site.published ? "Take the site down" : "Block publishing"}
           </Button>
         )}
+        {site.domain.name && <SiteAddress business={business} onChanged={onChanged} />}
       </div>
     </Card>
+  );
+}
+
+// A web address of their own that the owner asked to use for the site, and connecting it.
+function SiteAddress({ business, onChanged }) {
+  const { domain, domain_also_asked_by: others } = business.site;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [found, setFound] = useState(null);
+
+  async function act(what) {
+    setBusy(true);
+    setError(null);
+    try {
+      if (what === "check") {
+        setFound(await api(`/api/admin/businesses/${business.id}/site/domain/check`));
+      } else {
+        // Connect names the address looked at here, so one the owner changed meanwhile is not connected unseen.
+        const body = what === "connect" ? { domain: domain.name } : undefined;
+        onChanged(await api(`/api/admin/businesses/${business.id}/site/domain/${what}`, { method: "POST", body }));
+      }
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const said = (value, yes, no) => (value === true ? yes : value === false ? no : "could not be read just now");
+  return (
+    <div className="space-y-2 border-t border-border pt-3">
+      <p className="flex flex-wrap items-center gap-2 text-sm text-fg">
+        <span className="text-muted">Own address:</span>
+        <span className="font-medium [overflow-wrap:anywhere]">{domain.name}</span>
+        {domain.connected ? <Badge tone="success">Connected</Badge> : <Badge tone="warning">Waiting</Badge>}
+      </p>
+      {!domain.connected && (
+        <p className="text-xs text-muted">
+          Read the address letter by letter: it should plainly be this business&apos;s own. Then add it to the web service at the host, wait until the
+          host shows its certificate as issued, and press Connect. Connect works only once the owner&apos;s TXT record proves the address is theirs.
+        </p>
+      )}
+      {domain.connected && (
+        <p className="text-xs text-muted">After disconnecting, remove the address at the host too. Until then it answers nothing.</p>
+      )}
+      {others.length > 0 && (
+        <p className="text-xs text-warning-soft-fg">
+          Also asked for by: {others.map((other) => other.business_name || `business ${other.business_id}`).join(", ")}. Only the one who runs the
+          address can prove it.
+        </p>
+      )}
+      {found && (
+        <ul className="list-disc space-y-0.5 pl-5 text-xs text-muted">
+          <li>Proved theirs (TXT record): {said(found.proved, "yes", "not yet")}.</li>
+          <li>
+            Points here (CNAME to <span className="[overflow-wrap:anywhere]">{found.target}</span>):{" "}
+            {said(found.points_here, "yes", "not yet, or it is behind another company's proxy")}.
+          </li>
+        </ul>
+      )}
+      {error && <ErrorMessage error={error} />}
+      <div className="flex flex-wrap gap-2">
+        {domain.connected ? (
+          <Button variant="secondary" size="sm" disabled={busy} onClick={() => act("disconnect")}>Disconnect</Button>
+        ) : (
+          <>
+            <Button variant="secondary" size="sm" disabled={busy} onClick={() => act("check")}>Check its records</Button>
+            <Button size="sm" disabled={busy} onClick={() => act("connect")}>Connect</Button>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

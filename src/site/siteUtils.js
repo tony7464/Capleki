@@ -1,3 +1,5 @@
+import { cleanRich } from "./richParse.js";
+
 // Helpers for business websites: the look of a site, where its links go, and the pages a
 // new site starts with. A site is data (server/site_content.py): these turn that data
 // into what the block components draw, and never into HTML.
@@ -30,6 +32,9 @@ export function withDefaults(settings, businessName = "") {
     cta_label: "Request a quote",
     show_prices: false,
     footer_text: "",
+    logo: "",
+    logo_only: false,
+    description: "",
     ...Object.fromEntries(given),
   };
 }
@@ -103,9 +108,12 @@ export function themeVars(settings) {
   };
 }
 
-const LINK = /^(https?:\/\/|mailto:|tel:)[^\s<>"'`\\]+$/i;
+// No characters that cannot be seen inside an address (the server refuses them too).
+// eslint-disable-next-line no-control-regex
+const LINK = /^(https?:\/\/|mailto:|tel:)[^\s\x00-\x1f\x7f<>"'`\\]+$/i;
 // "example.com/page", typed without the https:// in front. The server keeps it with one.
-const BARE_DOMAIN = /^(?:[a-z0-9-]+\.)+[a-z]{2,24}(?:[/?#][^\s<>"'`\\]*)?$/i;
+// eslint-disable-next-line no-control-regex
+const BARE_DOMAIN = /^(?:[a-z0-9-]+\.)+[a-z]{2,24}(?:[/?#][^\s\x00-\x1f\x7f<>"'`\\]*)?$/i;
 const EMAIL = /^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`.]+$/;
 
 // A link a site may use, or null: an ordinary web, email, or phone link. The server
@@ -139,10 +147,76 @@ export function mailHref(email) {
 }
 
 // Where a page of a site lives: /site/<site> for the home page, /site/<site>/<page> for the
-// rest. site.base puts the pages somewhere else, as the owner's preview of drafts does.
+// rest. site.base puts the pages somewhere else: the owner's preview of drafts, and ""
+// on a business's own web address, where the pages are / and /<page>.
 export function pagePath(site, pageSlug) {
-  const base = site.base || `/site/${site.slug}`;
-  return pageSlug ? `${base}/${pageSlug}` : base;
+  const base = typeof site.base === "string" ? site.base : `/site/${site.slug}`;
+  return pageSlug ? `${base}/${pageSlug}` : base || "/";
+}
+
+// The id of a photo in a site's collection looks like this (the server checks the same).
+const PHOTO_ID = /^[0-9a-f]{32}$/;
+
+// Where the website asks for a photo of a site's collection, as an API path. size: "thumb"
+// for the small one. null for anything that is not a photo's id.
+export function photoPath(id, size) {
+  if (typeof id !== "string" || !PHOTO_ID.test(id)) return null;
+  return `/api/public/site-images/${id}${size === "thumb" ? "?size=thumb" : ""}`;
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Plain typed text as the formatted text it becomes: a blank line starts a new paragraph,
+// and a single line break stays a line break. Every character stays a character.
+export function textToHtml(text) {
+  return paragraphs(text)
+    .map((part) => `<p>${escapeHtml(part).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
+
+const RICH_NAME = /html$/i;
+
+// One block's (or one list item's) settings, with any formatted text written again in the
+// only form a site keeps (cleanRich). What is not text under such a name is no text.
+function cleanSettings(props) {
+  const cleaned = { ...props };
+  for (const [key, value] of Object.entries(cleaned)) {
+    if (RICH_NAME.test(key)) cleaned[key] = typeof value === "string" ? cleanRich(value) : "";
+  }
+  return cleaned;
+}
+
+// A page's blocks as the editor wants them now, blocks inside columns too:
+// - Text blocks made before formatted text held plain words in "text"; they move to "html".
+// - Formatted text is handed to the editor only in the form a site keeps. The server
+//   already keeps nothing else; this is the same lock on the way in to the editor, whose
+//   text box shows what it is given as it is for a moment.
+export function upgradeBlocks(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map((block) => {
+    if (!block || typeof block !== "object" || !block.props || typeof block.props !== "object") return block;
+    const props = cleanSettings(block.props);
+    for (const [key, value] of Object.entries(props)) {
+      if (!Array.isArray(value) || RICH_NAME.test(key)) continue;
+      if (value.length && value.every((entry) => entry && typeof entry === "object" && "type" in entry && "props" in entry)) {
+        props[key] = upgradeBlocks(value);
+      } else {
+        props[key] = value.map((item) => (item && typeof item === "object" && !Array.isArray(item) ? cleanSettings(item) : item));
+      }
+    }
+    if (block.type === "Text" && !props.html && typeof props.text === "string") {
+      props.html = textToHtml(props.text);
+    }
+    if (block.type === "Text") delete props.text;
+    return { ...block, props };
+  });
+}
+
+// A page's data with its blocks upgraded (see upgradeBlocks).
+export function upgradePage(data) {
+  return { ...data, content: upgradeBlocks(data?.content), root: data?.root || { props: {} } };
 }
 
 // Where a button goes. link: { action, href, page }. site: { slug, pages, request_url, settings }.
@@ -285,7 +359,7 @@ export function starterPages(businessName) {
       title: "Services",
       data: page(
         block("Heading", { text: "Our services", level: 2, align: "left" }),
-        block("Text", { text: "Here is what we can do for you. Not sure what you need? Ask us.", align: "left", size: "normal" }),
+        block("Text", { html: "<p>Here is what we can do for you. Not sure what you need? Ask us.</p>", align: "left", size: "normal" }),
         block("Services", { title: "", intro: "", source: "pricebook", items: [], columns: 2 }),
       ),
     },
@@ -294,7 +368,7 @@ export function starterPages(businessName) {
       data: page(
         block("Heading", { text: `About ${name}`, level: 2, align: "left" }),
         block("Text", {
-          text: "Tell your story here: who you are, how long you have been doing this work, and what matters to you.\n\nPeople hire people they trust. A few honest lines go a long way.",
+          html: "<p>Tell your story here: who you are, how long you have been doing this work, and what matters to you.</p><p>People hire people they trust. A few honest lines go a long way.</p>",
           align: "left",
           size: "normal",
         }),

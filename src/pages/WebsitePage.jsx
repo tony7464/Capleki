@@ -2,20 +2,21 @@ import { Puck } from "@puckeditor/core";
 import "@puckeditor/core/no-external.css";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api } from "../api";
+import { api, apiUrl } from "../api";
 import ConfirmDelete from "../components/ConfirmDelete";
 import ErrorMessage from "../components/ErrorMessage";
 import { Checkbox, FormActions, Input, Select, TextArea } from "../components/Field";
 import Loading from "../components/Loading";
 import { Button } from "../components/ui/Button";
 import { Alert } from "../components/ui/Feedback";
-import { ChevronLeftIcon, ExternalIcon, PlusIcon, SettingsIcon } from "../components/ui/Icons";
+import { ChevronLeftIcon, ExternalIcon, ImageIcon, PlusIcon, SettingsIcon } from "../components/ui/Icons";
 import { Modal } from "../components/ui/Modal";
 import { buttonClass } from "../components/ui/styles";
 import { useAuth } from "../context/useAuth";
+import PhotoLibrary from "../site/PhotoLibrary";
 import { buildConfig } from "../site/puckConfig";
-import { SiteContext } from "../site/SiteContext";
-import { DEFAULT_COLOR, FONTS, isAppName, slugProblem, starterPages, typedSlug, withDefaults } from "../site/siteUtils";
+import { PhotosContext, SiteContext, usePhotos } from "../site/SiteContext";
+import { DEFAULT_COLOR, FONTS, isAppName, photoPath, slugProblem, starterPages, typedSlug, upgradePage, withDefaults } from "../site/siteUtils";
 
 // The part of a page's data that is saved. Compared as text to tell a real change from the
 // editor tidying what it was given.
@@ -114,10 +115,102 @@ function StartSite({ suggested, businessName, onCreated }) {
 
 // --- Dialogs --------------------------------------------------------------------------
 
+// Where the site is, as its owner would say it: "crewjobtrack.com/site/acme", or its own address.
+function addressOf(site) {
+  return site.url.replace(/^https?:\/\//, "");
+}
+
+// One DNS record for the owner to add: what kind, under what name, with what value.
+function DnsRecord({ kind, name, value }) {
+  return (
+    <span className="mt-1 block rounded-lg bg-surface-2 px-2.5 py-2 text-xs text-fg">
+      <span className="block">Type: <strong>{kind}</strong></span>
+      <span className="block [overflow-wrap:anywhere]">Name: <code>{name}</code></span>
+      <span className="block [overflow-wrap:anywhere]">Value: <code>{value}</code></span>
+    </span>
+  );
+}
+
+function Mark({ done }) {
+  if (done === true) return <span className="font-medium text-success">Found.</span>;
+  if (done === false) return <span>Not found yet.</span>;
+  return null;
+}
+
+// The site's own web address: asking for one, and what is left to do before it works.
+function OwnAddress({ site, domain, onDomain, error }) {
+  const [found, setFound] = useState(null);
+  const [checking, setChecking] = useState(false);
+  const asked = site.domain.name;
+  const proof = site.domain.proof;
+
+  async function check() {
+    setChecking(true);
+    try {
+      const answer = await api("/api/site/domain/check");
+      setFound({ points: answer.points_here, proved: answer.proved });
+    } catch {
+      setFound({ points: null, proved: null, failed: true });
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl border border-border p-3">
+      <Input
+        label="Your own web address (optional)"
+        value={domain}
+        onChange={(event) => onDomain(event.target.value)}
+        maxLength={253}
+        placeholder="www.yourbusiness.com"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        hint="An address you already own, from a company such as GoDaddy or Namecheap. Leave it empty to keep the address above."
+        error={error}
+      />
+      {asked && proof && domain.trim().toLowerCase() === asked && (
+        site.domain.connected ? (
+          <p className="text-sm text-success">Connected. Your site is at {asked}, and the address above still works too.</p>
+        ) : (
+          <div className="space-y-2 text-sm text-muted">
+            <p className="font-medium text-fg">Three steps are left before {asked} shows your site.</p>
+            <p>Sign in to the company you got the address from, find its DNS records, and add these two:</p>
+            <ol className="list-decimal space-y-2 pl-5">
+              <li>
+                One that points the address at your site. <Mark done={found?.points} />
+                <DnsRecord kind="CNAME" name={asked} value={site.domain.target} />
+              </li>
+              <li>
+                One that shows the address is yours. <Mark done={found?.proved} />
+                <DnsRecord kind="TXT" name={proof.name} value={proof.value} />
+              </li>
+              <li>We connect it on our side, usually within a business day. Until then your site stays at the address above.</li>
+            </ol>
+            <p className="text-xs">
+              Many companies add your domain to the name themselves. There, type only the part in front of it: for www.acme.com that is{" "}
+              <code>www</code> and <code>_crewjobtrack.www</code>.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={check} disabled={checking}>{checking ? "Checking…" : "Check my records"}</Button>
+              {found?.failed && <span>They could not be checked just now. Try again in a minute.</span>}
+              {found?.points && found?.proved && <span className="text-success">Both are in place. We will connect it shortly.</span>}
+              {found && !found.failed && !(found.points && found.proved) && <span>A new record can take a few hours to show.</span>}
+            </div>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
 function SiteSettingsDialog({ site, businessName, onSaved, onDeleted, onClose }) {
   const start = withDefaults(site.settings, businessName);
+  const photos = usePhotos();
   const [values, setValues] = useState(start);
   const [slug, setSlug] = useState(site.slug);
+  const [domain, setDomain] = useState(site.domain.name);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const set = (key) => (event) => setValues((current) => ({ ...current, [key]: event.target.value }));
@@ -142,12 +235,20 @@ function SiteSettingsDialog({ site, businessName, onSaved, onDeleted, onClose })
       const body = {};
       if (slug !== site.slug) body.slug = slug;
       if (JSON.stringify(values) !== JSON.stringify(start)) body.settings = values;
+      if (domain.trim() !== site.domain.name) body.domain = domain.trim();
       if (Object.keys(body).length) onSaved((await api("/api/site", { method: "PATCH", body })).site);
       onClose();
     } catch (err) {
       setError(err);
       setBusy(false);
     }
+  }
+
+  const hasLogo = Boolean(values.logo && photos.images.some((image) => image.id === values.logo));
+
+  async function pickLogo() {
+    const picked = await photos.choose({ several: false });
+    if (picked?.length) setValues((current) => ({ ...current, logo: picked[0] }));
   }
 
   async function unpublish() {
@@ -199,6 +300,28 @@ function SiteSettingsDialog({ site, businessName, onSaved, onDeleted, onClose })
           </Select>
           <Input label="Words on that button" value={values.cta_label} onChange={set("cta_label")} maxLength={40} />
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {hasLogo ? (
+            <img src={apiUrl(photoPath(values.logo, "thumb"))} alt="" className="h-14 w-auto max-w-40 rounded-lg border border-border bg-surface-2 object-contain" />
+          ) : (
+            <span className="flex h-14 w-14 items-center justify-center rounded-lg border border-dashed border-border-strong text-xs text-muted">None</span>
+          )}
+          <div>
+            <p className="text-sm font-medium text-fg">Logo in the header (optional)</p>
+            <div className="mt-1 flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={pickLogo}>{hasLogo ? "Change logo" : "Pick a logo"}</Button>
+              {values.logo && <Button variant="ghost" size="sm" onClick={() => setValues((current) => ({ ...current, logo: "", logo_only: false }))}>Remove</Button>}
+            </div>
+          </div>
+        </div>
+        {hasLogo && (
+          <Checkbox
+            label="My logo already shows my business name"
+            description="On: the header shows the logo alone, without the name in words beside it."
+            checked={Boolean(values.logo_only)}
+            onChange={toggle("logo_only")}
+          />
+        )}
         <Checkbox label="Show the phone number in the header" checked={Boolean(values.show_phone)} onChange={toggle("show_phone")} />
         <Checkbox
           label="Show prices from my price book"
@@ -207,6 +330,14 @@ function SiteSettingsDialog({ site, businessName, onSaved, onDeleted, onClose })
           onChange={toggle("show_prices")}
         />
         <TextArea label="Words in the footer (optional)" value={values.footer_text} onChange={set("footer_text")} maxLength={300} rows={2} />
+        <TextArea
+          label="About your business, in a sentence or two (optional)"
+          hint="Shown under your name in Google results, and when someone shares a link to your site."
+          value={values.description}
+          onChange={set("description")}
+          maxLength={300}
+          rows={2}
+        />
         <AddressInput
           label="Site address"
           value={slug}
@@ -214,7 +345,8 @@ function SiteSettingsDialog({ site, businessName, onSaved, onDeleted, onClose })
           hint={`crewjobtrack.com/site/${slug}. Changing it breaks links to the old address.`}
           error={fieldError(error, "slug") || slugProblem(slug) || undefined}
         />
-        {error && !fieldError(error, "slug") && <ErrorMessage error={error} />}
+        {site.domain.available && <OwnAddress site={site} domain={domain} onDomain={setDomain} error={fieldError(error, "domain")} />}
+        {error && !fieldError(error, "slug") && !fieldError(error, "domain") && <ErrorMessage error={error} />}
         <FormActions>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button type="submit" disabled={busy || Boolean(slugProblem(slug))}>{busy ? "Saving…" : "Save"}</Button>
@@ -291,13 +423,13 @@ function PageDialog({ site, page, saveFirst, onChanged, onDelete, onClose }) {
       <form onSubmit={save} className="space-y-4">
         <Input label="Page name" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={60} required error={fieldError(error, "title")} />
         {page.is_home ? (
-          <p className="text-sm text-muted">This is the home page: it is what people see at crewjobtrack.com/site/{site.slug}.</p>
+          <p className="text-sm text-muted">This is the home page: it is what people see at {addressOf(site)}.</p>
         ) : (
           <AddressInput
             label="Page address"
             value={slug}
             onValue={setSlug}
-            hint={`crewjobtrack.com/site/${site.slug}/${slug}. Buttons that go to this page follow it to a new address.`}
+            hint={`${addressOf(site)}/${slug}. Buttons that go to this page follow it to a new address.`}
             error={fieldError(error, "slug") || slugProblem(slug) || undefined}
           />
         )}
@@ -423,6 +555,10 @@ function SiteEditor({ initial, businessName, lookOnly, onDeleted }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState(null);
   const [notice, setNotice] = useState(null);
+  // The site's own photos, null until they are known. And the question "which photo?" a block or a
+  // setting is waiting on: { several, answer }.
+  const [library, setLibrary] = useState(null);
+  const [picking, setPicking] = useState(null);
   // Edits that are not saved yet: the newest for each page, by the page's id. And the timer that will save them.
   const pending = useRef(new Map());
   const timer = useRef(null);
@@ -455,12 +591,40 @@ function SiteEditor({ initial, businessName, lookOnly, onDeleted }) {
 
   useEffect(() => {
     let cancelled = false;
+    api("/api/site/images")
+      .then((data) => !cancelled && setLibrary({ images: data.images, max: data.max_images, enabled: data.enabled }))
+      .catch(() => !cancelled && setLibrary((current) => current || { images: [], max: 0, enabled: false }));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Ask the owner for a photo (or several) from the site's photos. Answers their ids, or null.
+  const choose = useCallback(
+    ({ several = false } = {}) =>
+      new Promise((answer) => {
+        setPicking((current) => {
+          // One question at a time: the one before goes unanswered.
+          current?.answer(null);
+          return { several, answer };
+        });
+      }),
+    [],
+  );
+  const photos = useMemo(() => ({ images: library?.images || [], choose }), [library, choose]);
+  const changeLibrary = useCallback((change) => setLibrary((current) => ({ ...current, images: change(current.images) })), []);
+
+  useEffect(() => {
+    let cancelled = false;
     api(`/api/site/pages/${page.id}`)
-      .then((data) => {
+      .then((got) => {
         if (cancelled) return;
+        // Blocks made before formatted text are brought up to date here, in the editor
+        // only: the page is not saved (or shown as changed) until the owner edits it.
+        const data = upgradePage(got.data);
         shown.current = page.id;
-        lastSaved.current = snapshot(data.data);
-        setLoaded({ id: page.id, data: data.data });
+        lastSaved.current = snapshot(data);
+        setLoaded({ id: page.id, data });
       })
       .catch((error) => !cancelled && setProblem(error.message));
     return () => {
@@ -536,6 +700,27 @@ function SiteEditor({ initial, businessName, lookOnly, onDeleted }) {
     }
   }, []);
 
+  // Where each photo is used changes as pages are saved, so it is asked for again whenever
+  // the site's photos are opened (once what is waiting has been saved): the "in use" mark
+  // and the warning before a delete are then about the pages as they are now.
+  const photosOpen = dialog === "photos" || Boolean(picking);
+  useEffect(() => {
+    if (!photosOpen) return undefined;
+    let cancelled = false;
+    flush()
+      .then(() => api("/api/site/images"))
+      .then((data) => {
+        if (cancelled) return;
+        const used = new Map(data.images.map((image) => [image.id, image.used_on]));
+        // Only where they are used: photos added or deleted here meanwhile stay as they are.
+        setLibrary((current) => current && { ...current, images: current.images.map((image) => (used.has(image.id) ? { ...image, used_on: used.get(image.id) } : image)) });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [photosOpen, flush]);
+
   // Load the page again and start the editor afresh on it, after something outside the
   // editor changed what it shows (the page's name or address, the menu).
   const restartEditor = useCallback(() => {
@@ -575,14 +760,15 @@ function SiteEditor({ initial, businessName, lookOnly, onDeleted }) {
 
   // While a dialog is open, undo and redo belong to its text boxes. The editor listens for
   // those keys on the whole page, and would undo the owner's work behind the dialog instead.
+  const dialogOpen = Boolean(dialog || picking);
   useEffect(() => {
-    if (!dialog) return undefined;
+    if (!dialogOpen) return undefined;
     const keepFromEditor = (event) => {
       if ((event.ctrlKey || event.metaKey) && ["KeyZ", "KeyY", "KeyI"].includes(event.code)) event.stopPropagation();
     };
     window.addEventListener("keydown", keepFromEditor, true);
     return () => window.removeEventListener("keydown", keepFromEditor, true);
-  }, [dialog]);
+  }, [dialogOpen]);
 
   // Back to the app: only once everything is saved, like going to another page.
   async function leave(event) {
@@ -647,14 +833,16 @@ function SiteEditor({ initial, businessName, lookOnly, onDeleted }) {
         pages: site.pages.map(({ slug, title, in_menu }) => ({ slug, title, in_menu })),
         request_url: extras?.request_url || null,
         services: extras?.services || [],
+        images: Object.fromEntries((library?.images || []).map((image) => [image.id, { width: image.width, height: image.height }])),
       },
     }),
-    [site, extras, businessName],
+    [site, extras, businessName, library],
   );
-  const config = useMemo(() => buildConfig({ pages: site.pages, current: page.slug }), [site.pages, page.slug]);
-  const ready = loaded?.id === page.id && extras !== null;
+  const config = useMemo(() => buildConfig({ pages: site.pages, current: page.slug, lookOnly }), [site.pages, page.slug, lookOnly]);
+  const ready = loaded?.id === page.id && extras !== null && library !== null;
 
   return (
+    <PhotosContext.Provider value={photos}>
     <div className="flex h-dvh flex-col bg-bg">
       <div className="flex min-h-13 flex-wrap items-center gap-2 border-b border-border bg-surface px-3 py-2">
         <Link to="/dashboard" onClick={leave} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-muted hover:bg-surface-2 hover:text-fg">
@@ -675,13 +863,16 @@ function SiteEditor({ initial, businessName, lookOnly, onDeleted }) {
         <Button variant="ghost" size="sm" onClick={() => setDialog("add")} disabled={site.pages.length >= site.max_pages}>
           <PlusIcon /> Add page
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => setDialog("site")}>
+        <Button variant="ghost" size="sm" onClick={() => setDialog("photos")} disabled={library === null}>
+          <ImageIcon className="h-4 w-4" /> Photos
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => setDialog("site")} disabled={library === null}>
           <SettingsIcon className="h-4 w-4" /> Site settings
         </Button>
         <span className="ml-auto flex flex-wrap items-center gap-2 text-xs text-muted">
           {site.published ? (
             <a href={site.url} target="_blank" rel="noreferrer" className={buttonClass({ variant: "ghost", size: "sm" })}>
-              <ExternalIcon /> {site.url.replace(/^https?:\/\//, "")}
+              <ExternalIcon /> {addressOf(site)}
             </a>
           ) : (
             <span>Not published yet</span>
@@ -778,7 +969,28 @@ function SiteEditor({ initial, businessName, lookOnly, onDeleted }) {
           onClose={() => setDialog(null)}
         />
       )}
+      {dialog === "photos" && library && (
+        <PhotoLibrary library={library} onLibrary={changeLibrary} lookOnly={lookOnly} onClose={() => setDialog(null)} />
+      )}
+      {/* Last, so it opens over a dialog that asked for a photo (the site's settings, for the logo). */}
+      {picking && library && (
+        <PhotoLibrary
+          library={library}
+          onLibrary={changeLibrary}
+          choosing={picking}
+          lookOnly={lookOnly}
+          onChoose={(ids) => {
+            picking.answer(ids);
+            setPicking(null);
+          }}
+          onClose={() => {
+            picking.answer(null);
+            setPicking(null);
+          }}
+        />
+      )}
     </div>
+    </PhotosContext.Provider>
   );
 }
 

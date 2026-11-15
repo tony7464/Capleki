@@ -992,3 +992,10 @@
     animation: none;
   }
 }
+
+/* The website editor's formatting tools (bold, lists, link) above a block's text in the
+   side panel. In a narrow panel they wrap to a second row instead of scrolling out of sight. */
+[data-puck-rte-menu][class*="RichTextMenu--form"] {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}

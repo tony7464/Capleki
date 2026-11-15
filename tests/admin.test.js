@@ -64,3 +64,13 @@ test("the record reads differently for the admin and for the owner", () => {
   assert.equal(eventText({ action: "site_allowed", admin_name: "Root Owner", detail: "/site/ann-co" }, true), "Support allowed your website to be published again (/site/ann-co)");
   assert.equal(eventText({ action: "something_new", detail: null }), "something_new");
 });
+
+test("the record says what happened to a website's own address", () => {
+  const admin = { admin_name: "Root Owner", detail: "www.ann-windows.com" };
+  assert.equal(eventText({ action: "site_domain_connected", ...admin }), "Root Owner connected the website to its own address (www.ann-windows.com)");
+  assert.equal(eventText({ action: "site_domain_connected", ...admin }, true), "Support connected your website to its own address (www.ann-windows.com)");
+  assert.equal(eventText({ action: "site_domain_disconnected", ...admin }, true), "Support disconnected your website from its own address (www.ann-windows.com)");
+  // Given up by the owner: the admin is reminded the address is still attached at the host.
+  assert.equal(eventText({ action: "site_domain_released", detail: "www.ann-windows.com" }), "The owner gave up the website's own address (www.ann-windows.com). Remove it at the host");
+  assert.equal(eventText({ action: "site_domain_released", detail: "www.ann-windows.com" }, true), "Your website stopped using its own address (www.ann-windows.com)");
+});

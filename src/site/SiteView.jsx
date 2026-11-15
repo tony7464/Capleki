@@ -22,6 +22,9 @@ const BLOCKS = {
   Columns: blocks.Columns,
   Spacer: blocks.Spacer,
   Divider: blocks.Divider,
+  Image: blocks.Image,
+  Gallery: blocks.Gallery,
+  PhotoText: blocks.PhotoText,
 };
 
 // A list of blocks from a page's data, drawn in order.

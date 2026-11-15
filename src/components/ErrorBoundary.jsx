@@ -6,6 +6,8 @@ import { LogoMark } from "./ui/Logo";
 // Catches an error thrown while drawing any page, so the visitor sees a message and a way
 // out instead of a blank white page. A page file that is gone after a deploy reloads the
 // tab by itself (see utils/chunkReload.js); if that did not help, the message stays.
+// plain: on a business's own web address, where the visitor came to that business's site:
+// the message does not show the app's logo or name.
 export default class ErrorBoundary extends Component {
   state = { error: null, reloading: false };
 
@@ -25,9 +27,10 @@ export default class ErrorBoundary extends Component {
     const { error, reloading } = this.state;
     if (!error) return this.props.children;
     const newVersion = isChunkLoadError(error);
+    const { plain } = this.props;
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center px-6 text-center">
-        <LogoMark className="h-14 w-14" />
+        {!plain && <LogoMark className="h-14 w-14" />}
         <h1 className="mt-5 font-display text-2xl font-bold tracking-tight">
           {newVersion ? "A new version is ready" : "Something went wrong"}
         </h1>
@@ -35,8 +38,10 @@ export default class ErrorBoundary extends Component {
           {reloading
             ? "Loading the new version…"
             : newVersion
-              ? "Crew Job Tracker was updated while this page was open. Reload to get the new version."
-              : "This page could not be shown. Your data is safe. Reload the page, and if it keeps happening, go back to the start."}
+              ? `${plain ? "This website" : "Crew Job Tracker"} was updated while this page was open. Reload to get the new version.`
+              : plain
+                ? "This page could not be shown. Reload the page, and if it keeps happening, go back to the start."
+                : "This page could not be shown. Your data is safe. Reload the page, and if it keeps happening, go back to the start."}
         </p>
         {!reloading && (
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">

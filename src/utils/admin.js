@@ -87,6 +87,14 @@ export function eventText(event, forOwner = false) {
       return `${who} took ${forOwner ? "your website" : "the website"} down${event.detail ? ` (${event.detail})` : ""}`;
     case "site_allowed":
       return `${who} allowed ${forOwner ? "your website" : "the website"} to be published again${event.detail ? ` (${event.detail})` : ""}`;
+    case "site_domain_connected":
+      return `${who} connected ${forOwner ? "your website" : "the website"} to its own address${event.detail ? ` (${event.detail})` : ""}`;
+    case "site_domain_disconnected":
+      return `${who} disconnected ${forOwner ? "your website" : "the website"} from its own address${event.detail ? ` (${event.detail})` : ""}`;
+    case "site_domain_released":
+      return forOwner
+        ? `Your website stopped using its own address${event.detail ? ` (${event.detail})` : ""}`
+        : `The owner gave up the website's own address${event.detail ? ` (${event.detail})` : ""}. Remove it at the host`;
     case "admin_granted":
       return `Admin rights given${event.detail ? ` to ${event.detail}` : ""}`;
     case "admin_revoked":

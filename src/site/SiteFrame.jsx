@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { SiteButton } from "./blocks";
+import { Photo, SiteButton } from "./blocks";
 import { useSite } from "./SiteContext";
 import { mailHref, pagePath, telHref, themeVars } from "./siteUtils";
 
@@ -15,14 +15,22 @@ export default function SiteFrame({ current = "", children }) {
   // In the editor a link does not leave the page being edited.
   const stop = editing ? (event) => event.preventDefault() : undefined;
   const cta = settings.cta === "none" ? null : { action: settings.cta === "call" ? "call" : "request" };
+  // The logo is one of the site's photos. When it already says the name, the name is not repeated in words.
+  const logo = Boolean(settings.logo && site.images && Object.hasOwn(site.images, settings.logo));
+  const named = !(logo && settings.logo_only);
 
   return (
     <div className="flex min-h-dvh flex-col text-base antialiased" style={{ ...themeVars(settings), background: "var(--site-bg)", color: "var(--site-fg)" }}>
       <header className="border-b" style={{ borderColor: "var(--site-border)", background: "var(--site-bg)" }}>
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-4 sm:px-6">
-          <Link to={pagePath(site, "")} onClick={stop} className="min-w-0 no-underline" style={{ color: "var(--site-fg)" }}>
-            <span className="block text-xl font-bold tracking-tight [font-family:inherit] [overflow-wrap:anywhere]">{site.name || "Your business"}</span>
-            {settings.tagline && <span className="block text-sm" style={{ color: "var(--site-muted)" }}>{settings.tagline}</span>}
+          <Link to={pagePath(site, "")} onClick={stop} className="flex min-w-0 items-center gap-3 no-underline" style={{ color: "var(--site-fg)" }}>
+            {logo && <Photo id={settings.logo} alt={named ? "" : site.name || "Home"} small eager className="h-11 w-auto max-w-44 shrink-0 object-contain sm:h-12" />}
+            {named && (
+              <span className="min-w-0">
+                <span className="block text-xl font-bold tracking-tight [font-family:inherit] [overflow-wrap:anywhere]">{site.name || "Your business"}</span>
+                {settings.tagline && <span className="block text-sm" style={{ color: "var(--site-muted)" }}>{settings.tagline}</span>}
+              </span>
+            )}
           </Link>
           {menu.length > 1 && (
             <nav aria-label="Pages" className="order-last flex w-full flex-wrap gap-x-5 gap-y-1 sm:order-none sm:w-auto sm:flex-1">
