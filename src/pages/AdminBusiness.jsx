@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import ErrorMessage from "../components/ErrorMessage";
 import { FormActions, Input, Select } from "../components/Field";
@@ -8,10 +8,11 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Alert } from "../components/ui/Feedback";
+import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { useAuth } from "../context/useAuth";
 import { useAsync } from "../hooks";
-import { PLAN_OPTIONS, ago, eventText, formatDate, formatWhen, planLabel } from "../utils/admin";
+import { PLAN_OPTIONS, ago, deletedThings, eventText, formatDate, formatWhen, planLabel, sameName } from "../utils/admin";
 import { formatMoney } from "../utils/format";
 import { companyRoleName } from "../utils/roles";
 
@@ -345,7 +346,177 @@ function SupportViewCard({ business }) {
   );
 }
 
-// One business: who is in it, its plan, password resets, and the support view.
+// The server's own sentences, without the field names in front.
+function said(error) {
+  const lines = Object.values(error?.data?.errors || {}).flat();
+  return lines.length ? lines.join(" ") : error.message;
+}
+
+// Deleting the business for good, in two steps that the server checks too: its name typed
+// out, then the admin's own password. plan is the server's answer to the first press: what
+// would go, and a token that lets this admin delete this one business for a few minutes.
+function DeleteDialog({ business, plan, onClose }) {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const errors = error?.data?.errors || {};
+  const { summary } = plan;
+  const named = sameName(name, plan.name);
+  // A dialog puts the cursor on its close button when it opens. Here it belongs in the name box.
+  const nameBox = useRef(null);
+  useEffect(() => {
+    nameBox.current?.focus();
+  }, []);
+
+  function next(event) {
+    event.preventDefault();
+    if (!named) return;
+    setError(null);
+    setStep(2);
+  }
+
+  async function remove(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const body = { token: plan.token, name, password };
+      const done = await api(`/api/admin/businesses/${business.id}/delete/confirm`, { method: "POST", body });
+      navigate("/admin", { replace: true, state: { deleted: done.name, domain: done.domain, emailed: done.emailed } });
+    } catch (err) {
+      setError(err);
+      setPassword("");
+      if (err.data?.errors?.name) setStep(1);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal title={`Delete ${plan.name}?`} description={`Step ${step} of 2`} onClose={busy ? () => {} : onClose} size="sm">
+      {step === 1 ? (
+        <form onSubmit={next} className="space-y-4">
+          <div>
+            <p className="text-sm font-medium text-fg">This deletes, for good:</p>
+            <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-fg">
+              {deletedThings(summary).map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
+          {summary.keep_login.length > 0 && (
+            <p className="text-sm text-muted [overflow-wrap:anywhere]">
+              Also in another company, so they keep their login and lose only this business: {summary.keep_login.join(", ")}.
+            </p>
+          )}
+          {summary.domain && (
+            <p className="text-sm text-muted [overflow-wrap:anywhere]">
+              Its website stops answering at {summary.domain}. Remove that address at the host afterwards.
+            </p>
+          )}
+          {summary.stripe && (
+            <p className="text-sm text-muted">Its Stripe account is the business&apos;s own. It stays open at Stripe.</p>
+          )}
+          <p className="text-sm text-muted">The owner is emailed that the account was deleted. It cannot be undone.</p>
+          <Input
+            label={
+              <>
+                Type <strong className="[overflow-wrap:anywhere]">{plan.name}</strong> to go on
+              </>
+            }
+            ref={nameBox}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            autoFocus
+            error={errors.name?.[0]}
+          />
+          <FormActions>
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="danger" disabled={!named}>
+              Continue
+            </Button>
+          </FormActions>
+        </form>
+      ) : (
+        <form onSubmit={remove} className="space-y-4">
+          <p className="text-sm text-fg">
+            Last step. Enter your own password to delete <strong className="[overflow-wrap:anywhere]">{plan.name}</strong> and everything in it.
+            This cannot be undone.
+          </p>
+          <Input
+            label="Your password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            autoFocus
+            error={errors.password?.[0]}
+          />
+          {error && !errors.password && <Alert tone="danger">{said(error)}</Alert>}
+          <FormActions>
+            <Button type="button" variant="ghost" onClick={() => setStep(1)} disabled={busy}>
+              Back
+            </Button>
+            <Button type="submit" variant="danger" disabled={busy || !password}>
+              {busy ? "Deleting…" : "Delete for good"}
+            </Button>
+          </FormActions>
+        </form>
+      )}
+    </Modal>
+  );
+}
+
+function DeleteCard({ business }) {
+  const [plan, setPlan] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Asks what would be deleted. Nothing is deleted by this.
+  async function begin() {
+    setBusy(true);
+    setError(null);
+    try {
+      setPlan(await api(`/api/admin/businesses/${business.id}/delete/start`, { method: "POST" }));
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="border-danger/30">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-medium text-fg">Delete this account</p>
+          <p className="mt-0.5 text-sm text-muted">
+            The business, its people, and everything in it, for good. You see what goes first, and nothing is deleted until you have typed
+            its name and your own password.
+          </p>
+        </div>
+        <Button variant="danger-outline" className="shrink-0" onClick={begin} disabled={busy}>
+          {busy ? "Checking…" : "Delete this account"}
+        </Button>
+      </div>
+      {error && (
+        <Alert tone="danger" className="mt-3">
+          {said(error)}
+        </Alert>
+      )}
+      {plan && <DeleteDialog business={business} plan={plan} onClose={() => setPlan(null)} />}
+    </Card>
+  );
+}
+
+// One business: who is in it, its plan, password resets, the support view, and deleting it.
 export default function AdminBusiness() {
   const { id } = useParams();
   const [reloadKey, setReloadKey] = useState(0);
@@ -393,6 +564,7 @@ export default function AdminBusiness() {
             </ul>
           )}
         </Card>
+        <DeleteCard business={business} />
       </div>
     </div>
   );

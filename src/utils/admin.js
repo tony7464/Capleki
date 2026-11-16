@@ -59,6 +59,27 @@ export function ago(iso, now = Date.now()) {
   return `${Math.round(days / 365)} years ago`;
 }
 
+// Whether what was typed is the business's name, capitals and extra spaces aside. For the
+// first step of deleting a business; the server checks the same before it deletes.
+export function sameName(typed, name) {
+  const plain = (value) => String(value ?? "").trim().split(/\s+/).join(" ").toLowerCase();
+  return plain(name) !== "" && plain(typed) === plain(name);
+}
+
+// What deleting a business removes, one line each, from the server's count of it.
+export function deletedThings(summary) {
+  const some = (count, one, many) => (count > 0 ? `${count} ${count === 1 ? one : many}` : null);
+  return [
+    summary.people === 1 ? "1 person (the owner)" : `${summary.people} people (the owner and the crew)`,
+    some(summary.clients, "client", "clients"),
+    some(summary.jobs, "job, with its notes and hours", "jobs, with their notes and hours"),
+    some(summary.quotes, "quote", "quotes"),
+    some(summary.invoices, "invoice, with its payments", "invoices, with their payments"),
+    some(summary.photos, "photo", "photos"),
+    summary.website ? "Its website" : null,
+  ].filter(Boolean);
+}
+
 // "For 3 days" -> " for 3 days"; nothing -> "".
 function trailing(detail) {
   return detail ? ` ${detail.charAt(0).toLowerCase()}${detail.slice(1)}` : "";
@@ -95,6 +116,8 @@ export function eventText(event, forOwner = false) {
       return forOwner
         ? `Your website stopped using its own address${event.detail ? ` (${event.detail})` : ""}`
         : `The owner gave up the website's own address${event.detail ? ` (${event.detail})` : ""}. Remove it at the host`;
+    case "business_deleted":
+      return `${who} deleted a business for good${event.detail ? `: ${event.detail}` : ""}`;
     case "admin_granted":
       return `Admin rights given${event.detail ? ` to ${event.detail}` : ""}`;
     case "admin_revoked":

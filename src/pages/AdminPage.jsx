@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import ErrorMessage from "../components/ErrorMessage";
 import Loading from "../components/Loading";
 import Pagination from "../components/Pagination";
 import { Badge } from "../components/ui/Badge";
 import { Card } from "../components/ui/Card";
-import { EmptyState } from "../components/ui/Feedback";
+import { Alert, EmptyState } from "../components/ui/Feedback";
 import { BriefcaseIcon, SearchIcon } from "../components/ui/Icons";
 import { PageHeader } from "../components/ui/PageHeader";
 import { useAsync } from "../hooks";
@@ -183,6 +183,15 @@ function RecentActivity() {
 
 // Every business that has signed up. For the people who run Crew Job Tracker only.
 export default function AdminPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  // Carried here from a business's page after it was deleted. Shown once: a reload does not say it again.
+  const [gone] = useState(location.state?.deleted ? location.state : null);
+  const hasState = Boolean(location.state);
+  useEffect(() => {
+    if (hasState) navigate(location.pathname, { replace: true, state: null });
+  }, [hasState, navigate, location.pathname]);
+
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
@@ -190,6 +199,13 @@ export default function AdminPage() {
         description="Every business that has signed up. You see who they are and how big they are, not their customers or jobs. To see what an owner sees, they turn on support access first."
       />
       <div className="space-y-6">
+        {gone && (
+          <Alert tone="success" title={`${gone.deleted} was deleted`}>
+            The business, its people and everything in it are gone.
+            {gone.emailed && " Its owner has been emailed."}
+            {gone.domain && ` Its website's address ${gone.domain} is still attached at the host: remove it there.`}
+          </Alert>
+        )}
         <WaitingAddresses />
         <Businesses />
         <RecentActivity />

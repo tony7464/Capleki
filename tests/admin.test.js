@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { PLAN_OPTIONS, accessLength, ago, eventText, formatDate, formatWhen, planLabel, planName } from "../src/utils/admin.js";
+import {
+  PLAN_OPTIONS, accessLength, ago, deletedThings, eventText, formatDate, formatWhen, planLabel, planName, sameName,
+} from "../src/utils/admin.js";
 
 test("a plan shows its price, and an agreed price beside the list price", () => {
   assert.equal(planLabel({ plan: null, plan_price_cents: null, list_price_cents: null }), "No plan");
@@ -73,4 +75,31 @@ test("the record says what happened to a website's own address", () => {
   // Given up by the owner: the admin is reminded the address is still attached at the host.
   assert.equal(eventText({ action: "site_domain_released", detail: "www.ann-windows.com" }), "The owner gave up the website's own address (www.ann-windows.com). Remove it at the host");
   assert.equal(eventText({ action: "site_domain_released", detail: "www.ann-windows.com" }, true), "Your website stopped using its own address (www.ann-windows.com)");
+});
+
+test("deleting a business: its name has to be typed, and what goes is listed", () => {
+  assert.ok(sameName("Ann Co", "Ann Co"));
+  // Capitals and extra spaces aside.
+  assert.ok(sameName("  ann   co ", "Ann Co"));
+  for (const typed of ["", "Ann", "Ann Co.", "AnnCo", "Bob Co", null, undefined]) assert.ok(!sameName(typed, "Ann Co"), String(typed));
+  // A business with no name to type is never matched by typing nothing.
+  assert.ok(!sameName("", ""));
+  assert.ok(!sameName("", null));
+
+  const summary = { people: 3, clients: 6, jobs: 26, quotes: 1, invoices: 3, photos: 2, website: true, domain: null, stripe: true, keep_login: [] };
+  assert.deepEqual(deletedThings(summary), [
+    "3 people (the owner and the crew)",
+    "6 clients",
+    "26 jobs, with their notes and hours",
+    "1 quote",
+    "3 invoices, with their payments",
+    "2 photos",
+    "Its website",
+  ]);
+  // What a business does not have is not listed.
+  const empty = { people: 1, clients: 0, jobs: 0, quotes: 0, invoices: 0, photos: 0, website: false, stripe: false, keep_login: [] };
+  assert.deepEqual(deletedThings(empty), ["1 person (the owner)"]);
+
+  const gone = { action: "business_deleted", admin_name: "Root Owner", detail: "Ann Co (business 12)" };
+  assert.equal(eventText(gone), "Root Owner deleted a business for good: Ann Co (business 12)");
 });
