@@ -53,7 +53,7 @@ export default function SettingsMessagesCard() {
             onChange={(value) => patch({ visit_confirmations: value })}
             disabled={saving}
             label="Confirm visits when they're booked"
-            description="Texts the customer (or emails them, without a mobile number) the date, time, and who's coming. Also when a visit moves or is cancelled. You can turn it off for one booking."
+            description="When a visit is booked, sends the customer the date, time, and who's coming: by text if they agreed to job texts, and by email if you have their email. You can turn it off for one booking."
           />
           <Switch
             checked={data.visit_reminders}

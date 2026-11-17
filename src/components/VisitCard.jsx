@@ -175,7 +175,11 @@ function VisitMessages({ jobId, canSend, reloadKey }) {
       </div>
       {data.messages.length === 0 ? (
         <p className="text-sm text-muted">
-          {reachable ? "Nothing yet." : "Nothing: there's no phone number or email for them."}
+          {reachable
+            ? "Nothing yet."
+            : data.channels.sms === "no_phone"
+              ? "Nothing: there's no phone number or email for them."
+              : "Nothing: they can't be texted, and there's no email for them."}
         </p>
       ) : (
         <ul className="space-y-1.5 text-sm">
@@ -198,7 +202,12 @@ function VisitMessages({ jobId, canSend, reloadKey }) {
       {notSetUp && data.messages.length > 0 && (
         <p className="mt-2 text-xs text-muted">Texting and email aren't set up yet, so these were only logged, not delivered.</p>
       )}
-      {data.channels.sms === "opted_out" && <p className="mt-2 text-xs text-muted">They asked not to get texts.</p>}
+      {data.channels.sms === "opted_out" && <p className="mt-2 text-xs text-muted">They are marked not to be texted.</p>}
+      {data.channels.sms === "no_consent" && (
+        <p className="mt-2 text-xs text-muted">
+          They have not agreed to job texts, so they are not texted.{data.channels.email === "ok" && " Email still goes."}
+        </p>
+      )}
       <ErrorMessage error={sendError} />
     </div>
   );

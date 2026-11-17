@@ -1,4 +1,4 @@
-# The landing, pricing, terms, and privacy pages are public, and so are the websites
+# The landing, pricing, terms, privacy, and SMS consent pages are public, and so are the websites
 # businesses publish (/site/...). A website is drawn in the browser, so reading one also
 # takes the app's scripts (/assets/), the page's data (/api/public/sites/) and its photos
 # (/api/public/site-images/).
@@ -9,6 +9,7 @@ Allow: /$
 Allow: /pricing
 Allow: /terms
 Allow: /privacy
+Allow: /sms-consent
 Allow: /marketing/
 Allow: /site/
 Allow: /assets/

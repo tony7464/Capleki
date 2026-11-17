@@ -57,11 +57,9 @@ export function importSummary(result) {
   if (result.skipped_count > 0) {
     lines.push(`${count(result.skipped_count, "row", "rows")} ${saved ? "left out" : "will be left out"}. The list is below.`);
   }
-  if (result.do_not_text > 0) {
+  if (result.kind === "clients" && result.new > 0) {
     lines.push(
-      `${result.do_not_text} ${result.do_not_text === 1 ? "has" : "have"} a phone but no number for texts in Jobber, so ${
-        result.do_not_text === 1 ? "it" : "they"
-      } ${saved ? are(result.do_not_text) : "will be"} marked Do not text.`,
+      `${saved ? "They are" : "They will be"} texted only after they agree to job texts. Ask them, then tick the box on their client page.`,
     );
   }
   if (result.archived > 0) {

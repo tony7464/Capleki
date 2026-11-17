@@ -565,7 +565,8 @@ function TextSendResult({ result, phone }) {
     );
   }
   const reasons = {
-    skipped_opted_out: "Not texted: they asked not to get texts.",
+    skipped_opted_out: "Not texted: they are marked not to be texted.",
+    skipped_no_consent: "Not texted: they have not agreed to job texts at this number.",
     recently_texted: "Not texted again: the link was texted to them a few minutes ago.",
     limit: "Not texted: today's text limit for your business is used up.",
   };

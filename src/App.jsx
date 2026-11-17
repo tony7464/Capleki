@@ -53,6 +53,7 @@ const PublicInvoicePage = lazy(() => import("./pages/PublicInvoicePage"));
 const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
 const VerifyEmailPage = lazy(() => import("./pages/VerifyEmailPage"));
 const LegalPage = lazy(() => import("./pages/landing/LegalPage"));
+const SmsConsentPage = lazy(() => import("./pages/landing/SmsConsentPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 
@@ -121,12 +122,14 @@ export default function App() {
   const verifyEmail = useMatch("/verify-email");
   const publicSite = useMatch("/site/:slug/*");
   const websiteEditor = useMatch("/website/*");
-  // The marketing pages have their own header and footer.
+  // The marketing pages have their own header and footer, and need no login. Terms, Privacy, and
+  // SMS consent are also what carriers read when business texting is registered (A2P 10DLC).
   const landing = useMatch("/");
   const pricing = useMatch("/pricing");
   const terms = useMatch("/terms");
   const privacy = useMatch("/privacy");
-  if (landing || pricing || terms || privacy) {
+  const smsConsent = useMatch("/sms-consent");
+  if (landing || pricing || terms || privacy || smsConsent) {
     return (
       <Suspense fallback={<Loading />}>
         <Routes>
@@ -134,6 +137,7 @@ export default function App() {
           <Route path="/pricing" element={<LandingPage section="pricing" />} />
           <Route path="/terms" element={<LegalPage page="terms" />} />
           <Route path="/privacy" element={<LegalPage page="privacy" />} />
+          <Route path="/sms-consent" element={<SmsConsentPage />} />
         </Routes>
       </Suspense>
     );

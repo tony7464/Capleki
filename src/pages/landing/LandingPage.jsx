@@ -32,7 +32,7 @@ import {
 const CrewScene = lazy(() => import("../../components/three/CrewScene"));
 
 const FEATURES = [
-  [InboxIcon, "New quote in a minute", "Enter the customer's name, phone, and address, pick a time, and they get a text confirming when you'll arrive."],
+  [InboxIcon, "New quote in a minute", "Enter the customer's name, phone, and address, pick a time, and they're told when you'll arrive: by text if they agree to texts, and by email if you add their email."],
   [CheckIcon, "Quote on site", "Your crew prices the job on site and sends the quote. The customer can accept it right there on your phone."],
   [CalendarIcon, "Team schedule", "Every job and crew member on one calendar. Drag a job to move it, and see who's free at a glance."],
   [PhoneIcon, "An app for your crew", "Today's jobs, directions, \"on my way\" texts, and clocking in and out, all on the phone they already have."],
@@ -57,7 +57,7 @@ const FEATURE_TINTS = [
 
 const STEPS = [
   ["Request", "A customer fills out your online request form or calls you."],
-  ["Visit", "Schedule a visit to see the job. The customer gets a text confirming the time."],
+  ["Visit", "Schedule a visit to see the job. The customer gets a text or email confirming the time."],
   ["Quote", "Price the work on site or from the office, and send the quote as a link."],
   ["Job", "When they accept, the job goes on your schedule with the visit's photos."],
   ["Paid", "Send the invoice. They pay by card, and the money goes straight to your bank."],
@@ -96,7 +96,7 @@ const FAQ = [
   ["Can I change plans or cancel?", "Yes, at any time. Your clients, jobs, and records always belong to you."],
   [
     "Will it text my customers?",
-    "Only about their own visits and quotes, and never with prices. Every text explains how to opt out, and you can turn confirmations and reminders off in Settings.",
+    "Only customers who agree to job texts get them, only about their own visits and quotes, and never with prices. They can reply STOP to any text to stop them, and you can turn confirmations and reminders off in Settings.",
   ],
 ];
 
@@ -583,6 +583,9 @@ function Footer() {
           </Link>
           <Link to="/privacy" className="hover:text-fg">
             Privacy
+          </Link>
+          <Link to="/sms-consent" className="hover:text-fg">
+            SMS consent
           </Link>
           <Link to="/login" className="hover:text-fg">
             Log in

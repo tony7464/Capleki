@@ -56,10 +56,17 @@ export default function OnMyWayCard({ jobId, onSent }) {
   if (error) return null;
   if (!data || !data.can_send) return null;
   const { channels } = data;
+  // Why no text can go, when one cannot. The server checks again before sending.
+  const noText = {
+    opted_out: "They are marked not to be texted.",
+    no_consent: "They have not agreed to job texts.",
+  }[data.sms_state];
   if (!channels.sms && !channels.email) {
     return (
       <Card title="On my way">
-        <p className="text-sm text-muted">This client has no phone number or email on file, so they cannot be told.</p>
+        <p className="text-sm text-muted">
+          {noText ? `${noText} They have no email on file either, so they cannot be told here.` : "This client has no phone number or email on file, so they cannot be told."}
+        </p>
       </Card>
     );
   }
@@ -124,6 +131,7 @@ export default function OnMyWayCard({ jobId, onSent }) {
             ))}
           </div>
         )}
+        {!channels.sms && noText && <p className="text-xs text-muted">{noText} They will get an email.</p>}
         <Button block onClick={send} disabled={sending}>
           {sending ? "Sending…" : chosen === "sms" ? "Text the client" : "Email the client"}
         </Button>

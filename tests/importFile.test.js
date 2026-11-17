@@ -19,7 +19,6 @@ test("a look at a client list says what will happen", () => {
     new: 189,
     existing: 2,
     skipped_count: 2,
-    do_not_text: 9,
     archived: 1,
   };
   assert.deepEqual(importSummary(look), {
@@ -27,7 +26,7 @@ test("a look at a client list says what will happen", () => {
     lines: [
       "2 are already here and will be left as they are.",
       "2 rows will be left out. The list is below.",
-      "9 have a phone but no number for texts in Jobber, so they will be marked Do not text.",
+      "They will be texted only after they agree to job texts. Ask them, then tick the box on their client page.",
       "1 is archived in Jobber and will be archived here too.",
     ],
   });
@@ -36,13 +35,13 @@ test("a look at a client list says what will happen", () => {
 });
 
 test("after saving, it says what happened", () => {
-  const saved = { kind: "clients", dry_run: false, rows: 4, new: 2, existing: 1, skipped_count: 1, do_not_text: 1, archived: 2 };
+  const saved = { kind: "clients", dry_run: false, rows: 4, new: 2, existing: 1, skipped_count: 1, archived: 2 };
   assert.deepEqual(importSummary(saved), {
     title: "Added 2 clients",
     lines: [
       "1 is already here and left as it is.",
       "1 row left out. The list is below.",
-      "1 has a phone but no number for texts in Jobber, so it is marked Do not text.",
+      "They are texted only after they agree to job texts. Ask them, then tick the box on their client page.",
       "2 are archived in Jobber and are archived here too.",
     ],
   });
