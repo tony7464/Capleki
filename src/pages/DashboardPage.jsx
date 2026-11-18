@@ -5,6 +5,7 @@ import BusinessHealthCard from "../components/BusinessHealthCard";
 import ErrorMessage from "../components/ErrorMessage";
 import JobList from "../components/JobList";
 import Loading from "../components/Loading";
+import TextingAlert from "../components/TextingAlert";
 import TeamSchedule from "../components/calendar/TeamSchedule";
 import { ButtonLink } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -15,7 +16,7 @@ import { Badge } from "../components/ui/Badge";
 import { PageHeader, SectionHeader } from "../components/ui/PageHeader";
 import { cx } from "../components/ui/styles";
 import { useAuth } from "../context/useAuth";
-import { useAsync } from "../hooks";
+import { useAsync, useTextingSummary } from "../hooks";
 import { daysBetween, formatDay, formatMoney, isOwed, overdueLabel, sumCents } from "../utils/format";
 
 // [totals key (whole cents), label, icon, icon colors, note(data)]
@@ -88,6 +89,8 @@ function applyJobChange(current, id, patch, fallback) {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data, setData, error } = useAsync(api, "/api/dashboard");
+  // Asked for alongside the dashboard, so the alert does not push the page down later.
+  const texting = useTextingSummary();
   // Bumped after a change in the unpaid list so the calendar shows it too.
   const [scheduleKey, setScheduleKey] = useState(0);
 
@@ -150,6 +153,7 @@ export default function DashboardPage() {
           </>
         }
       />
+      <TextingAlert summary={texting} />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {TOTAL_CARDS.map(([key, label, Icon, iconClass, note]) => (
           <TiltCard key={key} max={9} className="glass rounded-2xl border border-border p-4 shadow-card">

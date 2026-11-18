@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, fetchAll } from "../../api";
+import { api } from "../../api";
 import { useAsync, useMediaQuery, useSchedule, useSchedulePrefs } from "../../hooks";
 import { DEFAULT_DURATION } from "../../utils/format";
 import { hiddenFromPrefs, prefsFromHidden } from "../../utils/schedulePrefs";
@@ -33,13 +33,12 @@ const PHONE_QUERY = "(max-width: 639px)";
 
 // Loaded only when the owner opens it, so client-admins never ask for owner-only lists.
 function NewJobDialog({ initial, onSubmit, onClose }) {
-  const clients = useAsync(fetchAll, "/api/clients");
   const employees = useAsync(api, "/api/employees");
   return (
     <Modal title="New job" description="Times are in your business time zone." onClose={onClose} size="lg">
-      {clients.error || employees.error ? (
-        <ErrorMessage error={clients.error || employees.error} />
-      ) : !clients.data || !employees.data ? (
+      {employees.error ? (
+        <ErrorMessage error={employees.error} />
+      ) : !employees.data ? (
         <Loading />
       ) : (
         <>
@@ -53,7 +52,6 @@ function NewJobDialog({ initial, onSubmit, onClose }) {
             </Link>
           </p>
           <JobForm
-            clients={clients.data}
             employees={employees.data}
             initial={initial}
             onSubmit={onSubmit}

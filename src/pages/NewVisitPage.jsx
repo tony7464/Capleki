@@ -6,6 +6,7 @@ import { Checkbox, Input, Select, TextArea } from "../components/Field";
 import Loading from "../components/Loading";
 import MapLink from "../components/MapLink";
 import SmsConsentCheckbox from "../components/SmsConsentCheckbox";
+import TextingAlert from "../components/TextingAlert";
 import { Avatar } from "../components/ui/Avatar";
 import { Badge } from "../components/ui/Badge";
 import { Button, ButtonLink } from "../components/ui/Button";
@@ -15,12 +16,13 @@ import { AlertIcon, CalendarIcon, CheckIcon, CopyIcon, MapPinIcon, UsersIcon } f
 import { PageHeader } from "../components/ui/PageHeader";
 import { cx } from "../components/ui/styles";
 import { useAuth } from "../context/useAuth";
-import { useAsync } from "../hooks";
+import { useAsync, useClientSearch, useTextingSummary } from "../hooks";
 import { DURATION_PRESETS, formatDay, formatDuration, formatTimeRange, prettyTimeZone } from "../utils/format";
 import { emailLooksValid, fieldErrors, phoneLooksValid } from "../utils/requests";
 import { isOwner } from "../utils/roles";
 import { bookingContact, bookingNotify } from "../utils/booking";
 import { mayText } from "../utils/smsConsent";
+import { textingAlert } from "../utils/texting";
 import { addDays, businessToday } from "../utils/time";
 import { overlaps } from "../utils/visits";
 
@@ -291,26 +293,8 @@ function useSuggestions(customer) {
   const name = customer.name.trim();
   const digits = digitsOf(customer.phone);
   const query = digits.length >= 4 ? digits : name.length >= 2 ? name : "";
-  const [state, setState] = useState({ query: "", items: [] });
-
-  useEffect(() => {
-    if (!query) return undefined;
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      try {
-        const page = await api(`/api/clients?q=${encodeURIComponent(query)}&per_page=5`);
-        if (!cancelled) setState({ query, items: page.items });
-      } catch {
-        // Suggestions are a convenience: the form works without them.
-      }
-    }, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [query]);
-
-  return query && state.query === query ? state.items : [];
+  // Suggestions are a convenience: the form works without them, so a failed search shows none.
+  return useClientSearch(query, { perPage: 5 }).items;
 }
 
 function ClientChoice({ client, onUse, busy, label = "Use this client" }) {
@@ -628,14 +612,19 @@ function VisitStep({ user, today, who, consentLeftOut, visit, setVisit, notify, 
 // What happened to the confirmation text and email, in plain words.
 function MessageResults({ result, phone, email }) {
   const { messages, delivery, message_preview: preview } = result;
+  // Twilio took the text, but carriers may be blocking texts right now (owners are told).
+  const handed = messages?.sms === "queued" && delivery?.sms === "twilio";
+  const texting = useTextingSummary(handed);
   if (!messages) return null;
   const lines = [];
   const textLink = phone && preview ? `sms:${phone}?&body=${encodeURIComponent(preview)}` : null;
   if (messages.sms === "queued") {
     lines.push(
-      delivery.sms === "twilio"
-        ? ["success", `Texted the details to ${phone}.`]
-        : ["warning", "Texting isn't set up yet, so no text went out.", textLink],
+      delivery.sms !== "twilio"
+        ? ["warning", "Texting isn't set up yet, so no text went out.", textLink]
+        : textingAlert(texting)
+          ? ["warning", `The text to ${phone} went to Twilio, but texts are not arriving right now (see below).`, textLink]
+          : ["success", `Texted the details to ${phone}.`],
     );
   } else if (messages.sms === "skipped_opted_out") {
     lines.push(["info", "Not texted: they are marked not to be texted."]);
@@ -669,6 +658,7 @@ function MessageResults({ result, phone, email }) {
           )}
         </Alert>
       ))}
+      {handed && <TextingAlert summary={texting} />}
     </div>
   );
 }

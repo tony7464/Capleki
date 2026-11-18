@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { api, fetchAll } from "../api";
+import { api } from "../api";
+import ClientSearchPicker from "../components/ClientSearchPicker";
 import ConfirmDelete from "../components/ConfirmDelete";
 import ErrorMessage from "../components/ErrorMessage";
 import TaxRateHelper from "../components/tax/TaxRateHelper";
-import { Input, Select, TextArea } from "../components/Field";
+import { Input, TextArea } from "../components/Field";
 import CopyLink from "../components/CopyLink";
 import CreateInvoiceButton from "../components/CreateInvoiceButton";
 import EmailSendResult from "../components/EmailSendResult";
 import Loading from "../components/Loading";
 import { ItemsEditor, QuoteItems, QuoteTotals } from "../components/QuoteLines";
+import TextingAlert from "../components/TextingAlert";
 import { Badge, QuoteStatusBadge, RequestStatusBadge, StatusBadge } from "../components/ui/Badge";
 import { Button, ButtonLink } from "../components/ui/Button";
 import QuotePhotos from "../components/QuotePhotos";
@@ -19,9 +21,9 @@ import { Alert, EmptyState, Spinner } from "../components/ui/Feedback";
 import { BriefcaseIcon, CalendarIcon, InboxIcon, MailIcon, MapPinIcon, PhoneIcon, UsersIcon } from "../components/ui/Icons";
 import { PageHeader } from "../components/ui/PageHeader";
 import { cx } from "../components/ui/styles";
-import { useAsync } from "../hooks";
-import { clientLabels } from "../utils/clientLabels";
+import { useAsync, useHasClients, useTextingSummary } from "../hooks";
 import { formatDay, formatMoney } from "../utils/format";
+import { textingAlert } from "../utils/texting";
 import {
   MAX_NOTES,
   MAX_TITLE,
@@ -336,17 +338,18 @@ function QuoteEditor({ initial, onSave, onSend, saveLabel, sendBlocked, isNew = 
 
 // --- New quote ------------------------------------------------------------------
 
+// Who a new quote is for, found by searching. Only the first client is loaded up front, to
+// know whether there is anyone to quote.
 function ClientPicker() {
   const navigate = useNavigate();
-  const { data: clients, error } = useAsync(fetchAll, "/api/clients");
-  const [clientId, setClientId] = useState("");
+  const hasClients = useHasClients();
+  const [client, setClient] = useState(null);
 
   return (
     <div className="space-y-6">
       <PageHeader title="New quote" back={BACK} description="Pick who the quote is for." />
-      <ErrorMessage error={error} />
-      {!clients && !error && <Loading />}
-      {clients && !clients.length && (
+      {hasClients === null && <Loading />}
+      {hasClients === false && (
         <EmptyState
           icon={UsersIcon}
           title="No clients yet"
@@ -354,29 +357,22 @@ function ClientPicker() {
           action={<ButtonLink to="/clients">Add a client</ButtonLink>}
         />
       )}
-      {clients?.length > 0 && (
+      {hasClients && (
         <Card className="max-w-xl">
           <form
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
-              if (clientId) navigate(`/quotes/new?client_id=${clientId}`, { replace: true });
+              if (client) navigate(`/quotes/new?client_id=${client.id}`, { replace: true });
             }}
           >
-            <Select label="Client" value={clientId} onChange={(event) => setClientId(event.target.value)}>
-              <option value="" disabled>
-                Pick a client
-              </option>
-              {[...clientLabels(clients)].map(([id, label]) => (
-                <option key={id} value={id}>{label}</option>
-              ))}
-            </Select>
+            <ClientSearchPicker autoFocus onChange={setClient} />
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted">
                 To quote a request, open it in{" "}
                 <Link to="/requests" className="link">Requests</Link> and choose Create quote.
               </p>
-              <Button type="submit" disabled={!clientId}>Continue</Button>
+              <Button type="submit" disabled={!client}>Continue</Button>
             </div>
           </form>
         </Card>
@@ -556,10 +552,20 @@ function Linked({ quote }) {
 
 // Whether the quote link also went out by text.
 function TextSendResult({ result, phone }) {
+  // Twilio took the text, but carriers may be blocking texts right now (owners are told).
+  const handed = result?.sms === "queued" && result.sms_delivery === "twilio";
+  const texting = useTextingSummary(handed);
   if (!result?.sms) return null;
   if (result.sms === "queued") {
-    return result.sms_delivery === "twilio" ? (
-      <Alert tone="success">The link was also texted to {phone}.</Alert>
+    return handed ? (
+      <>
+        {textingAlert(texting) ? (
+          <Alert tone="warning">The link went to Twilio for {phone}, but texts are not arriving right now (see below).</Alert>
+        ) : (
+          <Alert tone="success">The link was also texted to {phone}.</Alert>
+        )}
+        <TextingAlert summary={texting} />
+      </>
     ) : (
       <Alert tone="info">Texting isn't set up yet, so the link was not texted to {phone}.</Alert>
     );

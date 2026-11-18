@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useAsync } from "../hooks";
 import { driveText, locationProblem, suggestEta } from "../utils/driveTime";
+import { deliveryBadge } from "../utils/texting";
 import ErrorMessage from "./ErrorMessage";
+import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Alert } from "./ui/Feedback";
@@ -20,7 +22,15 @@ function stamp(iso) {
 // Tell the client the crew is on the way: pick about how long, then send a text
 // (or an email). onSent() after sending, so the notes log can show it.
 export default function OnMyWayCard({ jobId, onSent }) {
-  const { data, setData, error } = useAsync(api, `/api/jobs/${jobId}/on_my_way`);
+  const [reloadKey, setReloadKey] = useState(0);
+  const { data, setData, error } = useAsync(api, `/api/jobs/${jobId}/on_my_way`, reloadKey);
+  // Sends so far: Twilio says what became of a text a moment after it goes, so look again then.
+  const [sends, setSends] = useState(0);
+  useEffect(() => {
+    if (!sends) return undefined;
+    const timers = [5000, 20000].map((wait) => setTimeout(() => setReloadKey((key) => key + 1), wait));
+    return () => timers.forEach(clearTimeout);
+  }, [sends]);
   const [eta, setEta] = useState(20);
   const [channel, setChannel] = useState(null);
   const [sending, setSending] = useState(false);
@@ -71,6 +81,8 @@ export default function OnMyWayCard({ jobId, onSent }) {
     );
   }
   const chosen = channel || (channels.sms ? "sms" : "email");
+  // What became of the last text (null for an email, or before Twilio has answered).
+  const lastText = deliveryBadge(data.last?.delivery);
 
   async function send() {
     setSending(true);
@@ -79,6 +91,7 @@ export default function OnMyWayCard({ jobId, onSent }) {
       const response = await api(`/api/jobs/${jobId}/on_my_way`, { method: "POST", body: { eta_minutes: eta, channel: chosen } });
       setResult(response);
       setData((current) => ({ ...current, last: response.message }));
+      setSends((count) => count + 1);
       onSent?.();
     } catch (err) {
       setSendError(err);
@@ -139,9 +152,19 @@ export default function OnMyWayCard({ jobId, onSent }) {
         {result && result.delivery === "log" && <Alert tone="warning">{NOT_SET_UP[result.message.channel]}</Alert>}
         {data.last && (
           <p className="text-xs text-muted">
-            Last told at {stamp(data.last.sent_at)} by {data.last.sender.name}: about {data.last.eta_minutes} min,{" "}
+            {lastText?.tone === "danger" ? "Last tried at" : "Last told at"} {stamp(data.last.sent_at)} by{" "}
+            {data.last.sender.name}: about {data.last.eta_minutes} min,{" "}
             {data.last.channel === "sms" ? "texted" : "emailed"} {data.last.sent_to}.
+            {lastText && (
+              <>
+                {" "}
+                <Badge tone={lastText.tone}>{lastText.label}</Badge>
+              </>
+            )}
           </p>
+        )}
+        {lastText?.reason && (
+          <p className={cx("text-xs", lastText.tone === "danger" ? "text-danger" : "text-muted")}>{lastText.reason}</p>
         )}
       </div>
     </Card>
