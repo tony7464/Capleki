@@ -116,6 +116,8 @@ export function eventText(event, forOwner = false) {
       return forOwner
         ? `Your website stopped using its own address${event.detail ? ` (${event.detail})` : ""}`
         : `The owner gave up the website's own address${event.detail ? ` (${event.detail})` : ""}. Remove it at the host`;
+    case "business_renamed":
+      return `${who} set the business name${event.detail ? `: ${event.detail.replace(" -> ", " to ")}` : ""}`;
     case "business_deleted":
       return `${who} deleted a business for good${event.detail ? `: ${event.detail}` : ""}`;
     case "admin_granted":
@@ -125,4 +127,15 @@ export function eventText(event, forOwner = false) {
     default:
       return event.detail || event.action;
   }
+}
+
+// The longest business name (server/schemas.py MAX_BUSINESS_NAME, the owner's own Settings limit).
+export const MAX_BUSINESS_NAME = 80;
+
+// Why a business name cannot be saved, or "" when it can. Spaces at either end do not count.
+export function businessNameError(name) {
+  const trimmed = String(name ?? "").trim();
+  if (!trimmed) return "Enter the business's name.";
+  if (trimmed.length > MAX_BUSINESS_NAME) return `Use at most ${MAX_BUSINESS_NAME} characters.`;
+  return "";
 }

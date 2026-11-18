@@ -12,7 +12,18 @@ import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { useAuth } from "../context/useAuth";
 import { useAsync } from "../hooks";
-import { PLAN_OPTIONS, ago, deletedThings, eventText, formatDate, formatWhen, planLabel, sameName } from "../utils/admin";
+import {
+  MAX_BUSINESS_NAME,
+  PLAN_OPTIONS,
+  ago,
+  businessNameError,
+  deletedThings,
+  eventText,
+  formatDate,
+  formatWhen,
+  planLabel,
+  sameName,
+} from "../utils/admin";
 import { formatMoney } from "../utils/format";
 import { companyRoleName } from "../utils/roles";
 
@@ -41,6 +52,69 @@ function Overview({ business }) {
         <Fact label="Jobs">{business.jobs}</Fact>
         <Fact label="Latest job">{formatDate(business.last_job_date) || "None yet"}</Fact>
       </dl>
+    </Card>
+  );
+}
+
+// The name the business's customers see in texts, emails and its public pages. An owner from
+// before signup asked for one (or who cleared it) has none, and customers then read "your
+// service provider".
+function NameCard({ business, onChanged }) {
+  const [name, setName] = useState(business.business_name || "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(null);
+  const [shownError, setShownError] = useState("");
+  const serverError = error?.data?.errors?.business_name?.[0];
+
+  async function submit(event) {
+    event.preventDefault();
+    setSaved(false);
+    setError(null);
+    const problem = businessNameError(name);
+    setShownError(problem);
+    if (problem) return;
+    setSaving(true);
+    try {
+      const next = await api(`/api/admin/businesses/${business.id}/name`, { method: "PATCH", body: { business_name: name.trim() } });
+      onChanged(next);
+      setName(next.business_name || "");
+      setSaved(true);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card
+      title="Business name"
+      description="What customers see in texts, emails, and quote and invoice pages. Change it only if the owner asked, or left it empty."
+    >
+      <form onSubmit={submit} className="space-y-3">
+        {!business.business_name && (
+          <Alert tone="warning">This business has no name, so its customers read "your service provider" instead.</Alert>
+        )}
+        <Input
+          label="Business name"
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+            setShownError("");
+            setSaved(false);
+          }}
+          maxLength={MAX_BUSINESS_NAME}
+          error={shownError || serverError}
+        />
+        {error && !serverError && <ErrorMessage error={error} />}
+        <FormActions>
+          {saved && <span className="self-center text-sm text-muted" role="status">Saved</span>}
+          <Button type="submit" disabled={saving || name.trim() === (business.business_name || "")}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </FormActions>
+      </form>
     </Card>
   );
 }
@@ -541,6 +615,7 @@ export default function AdminBusiness() {
       <div className="space-y-6">
         <Overview business={business} />
         <SupportViewCard business={business} />
+        <NameCard key={business.business_name || ""} business={business} onChanged={setData} />
         <PlanCard business={business} onChanged={setData} />
         {business.site && <SiteCard business={business} onChanged={setData} />}
         <Card title="People" description="Email someone a link to choose a new password. You never see the link or a password.">

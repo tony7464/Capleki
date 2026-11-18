@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  PLAN_OPTIONS, accessLength, ago, deletedThings, eventText, formatDate, formatWhen, planLabel, planName, sameName,
+  MAX_BUSINESS_NAME, PLAN_OPTIONS, accessLength, ago, businessNameError, deletedThings, eventText, formatDate, formatWhen,
+  planLabel, planName, sameName,
 } from "../src/utils/admin.js";
 
 test("a plan shows its price, and an agreed price beside the list price", () => {
@@ -102,4 +103,22 @@ test("deleting a business: its name has to be typed, and what goes is listed", (
 
   const gone = { action: "business_deleted", admin_name: "Root Owner", detail: "Ann Co (business 12)" };
   assert.equal(eventText(gone), "Root Owner deleted a business for good: Ann Co (business 12)");
+});
+
+test("a business name must have words in it and fit the owner's own Settings limit", () => {
+  assert.equal(MAX_BUSINESS_NAME, 80);
+  assert.equal(businessNameError(""), "Enter the business's name.");
+  assert.equal(businessNameError("   "), "Enter the business's name.");
+  assert.equal(businessNameError(null), "Enter the business's name.");
+  assert.equal(businessNameError("Jose's Gutters"), "");
+  // Spaces at either end are trimmed before the length counts.
+  assert.equal(businessNameError(` ${"x".repeat(80)} `), "");
+  assert.equal(businessNameError("x".repeat(81)), "Use at most 80 characters.");
+});
+
+test("the record says when an admin set the business name, for the admin and the owner", () => {
+  const renamed = { action: "business_renamed", admin_name: "Root Owner", detail: "(none) -> Jose's Gutters" };
+  assert.equal(eventText(renamed), "Root Owner set the business name: (none) to Jose's Gutters");
+  assert.equal(eventText(renamed, true), "Support set the business name: (none) to Jose's Gutters");
+  assert.equal(eventText({ action: "business_renamed", admin_name: "Root Owner", detail: null }), "Root Owner set the business name");
 });
