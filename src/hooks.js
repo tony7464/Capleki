@@ -3,6 +3,7 @@ import { api } from "./api";
 import { useAuth } from "./context/useAuth";
 import { isOwner } from "./utils/roles";
 import { PICKER_SIZE, clientSearchPath } from "./utils/clientSearch";
+import { stripeLiveFrom } from "./utils/invoices";
 
 // `load` must be a stable function (api or fetchAll), not an inline arrow.
 // Change reloadKey to fetch the same path again.
@@ -391,4 +392,14 @@ export function useTextingSummary(enabled = true) {
   const ask = enabled && isOwner(user);
   const { data } = useAsync(ask ? api : nothing, ask ? "/api/business/texting" : "");
   return ask ? data : null;
+}
+
+// The server's Stripe mode, from GET /api/business/stripe, the answer Settings shows
+// (SettingsPaymentsCard), read as Settings reads it (stripeLiveFrom in utils/invoices.js):
+// true when it takes real payments, false in test or mock mode, and null until it answers,
+// when it cannot, or while Stripe is not configured. With enabled false it is null and
+// nothing is asked, so a page only asks when a link needs it (needsServerMode).
+export function useStripeLive(enabled = true) {
+  const { data } = useAsync(enabled ? api : nothing, enabled ? "/api/business/stripe" : "");
+  return enabled ? stripeLiveFrom(data) : null;
 }
