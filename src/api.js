@@ -1,19 +1,23 @@
-import { joinApiBase } from "./utils/apiBase";
+import { apiOriginForHost, joinApiBase, pageHostname } from "./utils/apiBase";
 import { siteHost } from "./utils/siteHost";
 
 const FORBIDDEN = "You do not have access to this. Ask the business owner if you need it.";
 
-// VITE_API_BASE is read when the client is BUILT, not at runtime: it is baked into
-// the static files. Empty (the default) keeps relative /api paths, for the Vite
-// proxy and the Flask-served app. Set it, such as https://api.crewjobtrack.com, to
-// call an API on another host; changing that host means rebuilding the client.
-// On a business's own web address the API is on that same address (see utils/siteHost.js).
-const API_BASE = siteHost() ? "" : import.meta.env.VITE_API_BASE || "";
+// VITE_API_BASE is baked in at build time (https://api.crewjobtrack.com in
+// production). At runtime, capleki.com and www.capleki.com call
+// https://api.capleki.com instead, so the Lax session cookie stays same-site.
+// Empty VITE_API_BASE keeps relative /api paths, for the Vite proxy and the
+// Flask-served app. On a business's own web address the API is on that same
+// address (see utils/siteHost.js).
+export function currentApiBase() {
+  if (siteHost()) return "";
+  return apiOriginForHost(pageHostname(), import.meta.env.VITE_API_BASE || "");
+}
 
-// The URL for an API path ("/api/..."), on VITE_API_BASE when it is set.
+// The URL for an API path ("/api/..."), on the current API origin when it is set.
 // Use it for API URLs the browser loads directly, such as <img src>.
 export function apiUrl(path) {
-  return joinApiBase(API_BASE, path);
+  return joinApiBase(currentApiBase(), path);
 }
 
 function retryAfterSeconds(response) {
