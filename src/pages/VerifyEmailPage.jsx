@@ -63,7 +63,7 @@ export default function VerifyEmailPage() {
   );
 
   return (
-    <PublicShell title={<BusinessHeading fallback="Verify your email" subtitle="Crew Job Tracker" />} footer={FOOTER}>
+    <PublicShell title={<BusinessHeading fallback="Verify your email" subtitle="Capleki" />} footer={FOOTER}>
       {!state && (
         <div className="flex items-center justify-center gap-3 py-10 text-sm text-muted" role="status">
           <Spinner /> Checking your link…

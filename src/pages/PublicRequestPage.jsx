@@ -194,7 +194,7 @@ function PublicRequest({ token }) {
     const name = form?.business_name;
     document.title = name ? `${name} · Request a service` : FALLBACK_TITLE;
     return () => {
-      document.title = "Crew Job Tracker";
+      document.title = "Capleki";
     };
   }, [form?.business_name]);
 

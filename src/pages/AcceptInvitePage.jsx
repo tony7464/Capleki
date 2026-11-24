@@ -51,7 +51,7 @@ function AcceptInvite({ token }) {
         <BusinessHeading
           name={invite?.business_name}
           fallback="Join your crew"
-          subtitle={invite ? "invited you to join their crew" : "Crew Job Tracker"}
+          subtitle={invite ? "invited you to join their crew" : "Capleki"}
         />
       }
       footer={FOOTER}

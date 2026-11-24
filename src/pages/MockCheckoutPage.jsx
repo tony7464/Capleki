@@ -40,7 +40,7 @@ function MockCheckout({ token, sessionId }) {
   useEffect(() => {
     document.title = "Test payment (mock mode)";
     return () => {
-      document.title = "Crew Job Tracker";
+      document.title = "Capleki";
     };
   }, []);
 

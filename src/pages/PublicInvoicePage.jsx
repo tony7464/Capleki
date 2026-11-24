@@ -253,7 +253,7 @@ function PublicInvoice({ token }) {
     const name = invoice?.business_name;
     document.title = name ? `${name} · Invoice ${invoice.number}` : "Invoice";
     return () => {
-      document.title = "Crew Job Tracker";
+      document.title = "Capleki";
     };
   }, [invoice?.business_name, invoice?.number]);
 

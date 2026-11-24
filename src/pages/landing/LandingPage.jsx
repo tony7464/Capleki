@@ -110,8 +110,8 @@ function Logo() {
     <Link to="/" className="flex shrink-0 items-center gap-2.5 whitespace-nowrap font-display text-[17px] font-bold tracking-tight text-fg">
       <LogoMark className="h-9 w-9" />
       {/* The smallest phones have room for the buttons or the name, so the name goes. */}
-      <span className="hidden min-[400px]:inline">Crew Job Tracker</span>
-      <span className="sr-only min-[400px]:hidden">Crew Job Tracker</span>
+      <span className="hidden min-[400px]:inline">Capleki</span>
+      <span className="sr-only min-[400px]:hidden">Capleki</span>
     </Link>
   );
 }
@@ -602,9 +602,9 @@ export default function LandingPage({ section }) {
   const { hash } = useLocation();
   const target = section || hash.slice(1);
   useEffect(() => {
-    document.title = "Crew Job Tracker: quotes, scheduling, and payments for service businesses";
+    document.title = "Capleki: quotes, scheduling, and payments for service businesses";
     return () => {
-      document.title = "Crew Job Tracker";
+      document.title = "Capleki";
     };
   }, []);
   useEffect(() => {

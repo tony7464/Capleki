@@ -149,7 +149,7 @@ function Brand({ compact, tight }) {
     <Link to="/" className="flex items-center gap-2.5 whitespace-nowrap rounded-lg font-display text-[17px] font-bold tracking-tight text-fg">
       <LogoMark className="h-8 w-8" />
       <span className={compact ? "hidden sm:inline" : tight ? "md:hidden" : undefined}>
-        Crew Job Tracker
+        Capleki
       </span>
     </Link>
   );
