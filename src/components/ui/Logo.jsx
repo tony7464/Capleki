@@ -1,21 +1,43 @@
 import { cx } from "./styles";
 
-// The brand mark: a map pin with a check, for "job done".
+// The brand mark: a round hi-vis badge holding a map pin with a check, for "job done".
+// Ink with a lime pin on light pages; on dark pages the two swap (--logo-badge and
+// --logo-pin in index.css). public/icons/icon.svg is the same pin on a square tile.
 export function LogoMark({ className = "h-9 w-9" }) {
   return (
-    <span className={cx("relative flex shrink-0 items-center justify-center rounded-xl bg-brand text-white shadow-glow", className)}>
-      <svg viewBox="0 0 24 24" className="h-[62%] w-[62%]" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 120 120" className={cx("block shrink-0", className)} aria-hidden="true">
+      <circle cx="60" cy="60" r="58" className="fill-logo-badge" />
+      <g transform="translate(29 22) scale(0.62)">
         <path
-          d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"
-          fill="currentColor"
-          fillOpacity="0.22"
-          stroke="currentColor"
-          strokeWidth="1.8"
+          d="M50 120 L15.99 65.05 A40 40 0 1 1 84.01 65.05 Z"
+          className="fill-logo-pin stroke-logo-pin"
+          strokeWidth="4"
           strokeLinejoin="round"
         />
-        <path d="m8.8 10.2 2.3 2.3 4.2-4.4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-surface" />
+        <path
+          d="M30 45.2 L44.25 59.5 L71.3 29.6"
+          className="stroke-logo-badge"
+          fill="none"
+          strokeWidth="11"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </g>
+    </svg>
+  );
+}
+
+// The name as the logo writes it: ink on a lime block, tilted like a strip of hi-vis tape.
+// The same on light and dark pages. Sized by the font size around it.
+export function Wordmark({ className }) {
+  return (
+    <span
+      className={cx(
+        "inline-block -rotate-2 rounded-[0.14em] bg-accent px-[0.3em] pb-[0.2em] pt-[0.13em] font-display font-extrabold leading-none tracking-[-0.03em] text-logo-ink",
+        className,
+      )}
+    >
+      Capleki
     </span>
   );
 }

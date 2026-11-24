@@ -36,6 +36,12 @@
   --accent-hover: #d4f95e;
   --accent-fg: #1a2400;
 
+  /* The logo (components/ui/Logo.jsx): a hi-vis badge, ink with a lime pin. On dark pages
+     the two swap. The name is always ink on lime. */
+  --logo-ink: #15122b;
+  --logo-badge: var(--logo-ink);
+  --logo-pin: var(--accent);
+
   --danger: #c0262d;
   --danger-hover: #a11f25;
   --danger-fg: #ffffff;
@@ -88,6 +94,9 @@
   --accent-hover: #d4f95e;
   --accent-fg: #1a2400;
 
+  --logo-badge: var(--accent);
+  --logo-pin: var(--logo-ink);
+
   --danger: #f2777a;
   --danger-hover: #f69a9c;
   --danger-fg: #2a0709;
@@ -134,6 +143,9 @@
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-fg: var(--accent-fg);
+  --color-logo-ink: var(--logo-ink);
+  --color-logo-badge: var(--logo-badge);
+  --color-logo-pin: var(--logo-pin);
   --color-danger: var(--danger);
   --color-danger-hover: var(--danger-hover);
   --color-danger-fg: var(--danger-fg);

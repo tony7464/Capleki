@@ -16,7 +16,7 @@ import ThemeToggle from "./ThemeToggle";
 import { Avatar } from "./ui/Avatar";
 import { ButtonLink } from "./ui/Button";
 import { ChevronDownIcon, LogOutIcon, MenuIcon, SettingsIcon, XIcon } from "./ui/Icons";
-import { LogoMark } from "./ui/Logo";
+import { LogoMark, Wordmark } from "./ui/Logo";
 import { cx } from "./ui/styles";
 
 const OWNER_LINKS = [
@@ -48,7 +48,7 @@ function groupOf(path) {
 
 // Settings sits beside the account link on wide screens, and in the phone menu.
 const SETTINGS_LINK = ["/settings", "Settings"];
-// Only for the people who run Crew Job Tracker (see utils/roles.js).
+// Only for the people who run Capleki (see utils/roles.js).
 const ADMIN_LINK = ["/admin", "Admin"];
 
 function linksFor(user) {
@@ -146,10 +146,10 @@ function GroupMenu({ label, links, linkClass, pathname }) {
 // tight hides it from tablet width up, where the menu needs the room.
 function Brand({ compact, tight }) {
   return (
-    <Link to="/" className="flex items-center gap-2.5 whitespace-nowrap rounded-lg font-display text-[17px] font-bold tracking-tight text-fg">
+    <Link to="/" className="flex items-center gap-2.5 whitespace-nowrap rounded-lg text-[19px]">
       <LogoMark className="h-8 w-8" />
       <span className={compact ? "hidden sm:inline" : tight ? "md:hidden" : undefined}>
-        Capleki
+        <Wordmark />
       </span>
     </Link>
   );

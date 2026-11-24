@@ -13,7 +13,7 @@ import {
   RepeatIcon,
   UsersIcon,
 } from "../../components/ui/Icons";
-import { LogoMark } from "../../components/ui/Logo";
+import { LogoMark, Wordmark } from "../../components/ui/Logo";
 import { CountUp, Reveal, TiltCard } from "../../components/ui/Motion";
 import { cx } from "../../components/ui/styles";
 import { prefersReducedMotion, usePrefersReducedMotion } from "../../components/ui/useMotion";
@@ -21,7 +21,6 @@ import {
   ANNUAL_MONTHS_FREE,
   EVERY_PLAN,
   PLANS,
-  PLATFORM_FEE_PERCENT,
   TRIAL_DAYS,
   annualMonthly,
   annualPrice,
@@ -83,7 +82,7 @@ const FAQ = [
   ["Do I need a credit card for the free trial?", `No. Try everything for ${TRIAL_DAYS} days without a card.`],
   [
     "How do my customers pay me?",
-    `By card, through your own Stripe account, so the money goes straight to you. Crew Job Tracker takes ${PLATFORM_FEE_PERCENT}% of each payment; only Stripe's standard card fees apply. You can also connect a Stripe account you already have.`,
+    `By card, through your own Stripe account, so the money goes straight to you. Capleki takes no fee and never holds the money; only Stripe's standard card fees apply. You can also connect a Stripe account you already have.`,
   ],
   [
     "Does my crew have to install an app?",
@@ -107,10 +106,12 @@ const PANEL = "glass rounded-3xl border border-border shadow-card";
 
 function Logo() {
   return (
-    <Link to="/" className="flex shrink-0 items-center gap-2.5 whitespace-nowrap font-display text-[17px] font-bold tracking-tight text-fg">
+    <Link to="/" className="flex shrink-0 items-center gap-2.5 whitespace-nowrap text-[21px]">
       <LogoMark className="h-9 w-9" />
       {/* The smallest phones have room for the buttons or the name, so the name goes. */}
-      <span className="hidden min-[400px]:inline">Capleki</span>
+      <span className="hidden min-[400px]:inline">
+        <Wordmark />
+      </span>
       <span className="sr-only min-[400px]:hidden">Capleki</span>
     </Link>
   );
@@ -503,7 +504,7 @@ function Pricing() {
           </span>
           <p className="text-sm text-muted">
             <span className="font-semibold text-fg">Your Stripe, your money.</span> Customers pay you by card straight into
-            your own Stripe account. Crew Job Tracker takes {PLATFORM_FEE_PERCENT}% of each payment; only Stripe's standard card fees apply.
+            your own Stripe account. Capleki takes no fee and never holds the money; only Stripe's standard card fees apply.
           </p>
         </Reveal>
       </div>
@@ -572,7 +573,7 @@ function Footer() {
     <footer className="border-t border-border">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <p className="flex items-center gap-2">
-          <LogoMark className="h-6 w-6" />© {new Date().getFullYear()} Crew Job Tracker
+          <LogoMark className="h-6 w-6" />© {new Date().getFullYear()} Capleki
         </p>
         <nav className="flex flex-wrap gap-x-5 gap-y-2" aria-label="Footer">
           <Link to="/pricing" className="hover:text-fg">
