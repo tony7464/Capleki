@@ -5,25 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <!-- Set to the light or dark background by the script below and ThemeContext. -->
-    <meta name="theme-color" content="#f5f6f8" />
+    <meta name="theme-color" content="#f4f2fb" />
     <!-- Installable on a phone's home screen: Android reads the manifest, iPhone the apple-* tags. -->
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" sizes="any" href="/icons/icon.svg" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Crew Jobs" />
+    <meta name="apple-mobile-web-app-title" content="Capleki" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Crew Job Tracker</title>
-    <!-- Search results and link previews (texts, social posts). The image is public/marketing/og.png. -->
+    <title>Capleki</title>
+    <!-- Search results and link previews (texts, social posts). The image is public/marketing/og-capleki.png. -->
     <meta name="description" content="Quotes, estimate visits, scheduling, your crew's phones, and online payments in one app for small service businesses. 14 days free, no card needed." />
     <link rel="canonical" href="https://crewjobtrack.com/" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Crew Job Tracker" />
-    <meta property="og:title" content="Crew Job Tracker: quotes, scheduling, and payments for service businesses" />
+    <meta property="og:site_name" content="Capleki" />
+    <meta property="og:title" content="Capleki: quotes, scheduling, and payments for service businesses" />
     <meta property="og:description" content="Book estimate visits, quote on site, run your crew's day, and get paid online. 14 days free." />
     <meta property="og:url" content="https://crewjobtrack.com/" />
-    <meta property="og:image" content="https://crewjobtrack.com/marketing/og.png" />
+    <meta property="og:image" content="https://crewjobtrack.com/marketing/og-capleki.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -44,13 +45,13 @@
         if (dark) root.classList.add("dark");
         root.style.colorScheme = dark ? "dark" : "light";
         var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute("content", dark ? "#0c1018" : "#f5f6f8");
+        if (meta) meta.setAttribute("content", dark ? "#0b0a14" : "#f4f2fb");
       })();
     </script>
     <style>
       /* Page background before the stylesheet loads (dev mode injects CSS from JS). */
-      html { background: #f5f6f8; }
-      html.dark { background: #0c1018; }
+      html { background: #f4f2fb; }
+      html.dark { background: #0b0a14; }
     </style>
   </head>
   <body>

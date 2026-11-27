@@ -207,7 +207,7 @@ function PublicQuote({ token }) {
     const name = quote?.business_name;
     document.title = name ? `${name} · Quote` : "Quote";
     return () => {
-      document.title = "Crew Job Tracker";
+      document.title = "Capleki";
     };
   }, [quote?.business_name]);
 

@@ -2,14 +2,18 @@ import { useState } from "react";
 import ConfirmButton from "./ConfirmButton";
 import { CalendarIcon, CheckIcon, CopyIcon, ExternalIcon } from "./ui/Icons";
 import { buttonClass } from "./ui/styles";
+import { rewritePublicApiUrl } from "../utils/apiBase";
 
 const linkButton = buttonClass({ variant: "secondary", size: "md", className: "w-full sm:w-auto" });
 
 // links: { feed_url, webcal_url, google_url } from the API.
 export default function CalendarLinks({ links, onRegenerate }) {
   const [copied, setCopied] = useState(false);
+  const feedUrl = rewritePublicApiUrl(links?.feed_url);
+  const webcalUrl = rewritePublicApiUrl(links?.webcal_url);
+  const googleUrl = rewritePublicApiUrl(links?.google_url);
 
-  if (!links?.feed_url) {
+  if (!feedUrl) {
     return (
       <div className="space-y-2">
         <p className="text-sm text-muted">No calendar link yet.</p>
@@ -27,7 +31,7 @@ export default function CalendarLinks({ links, onRegenerate }) {
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(links.feed_url);
+      await navigator.clipboard.writeText(feedUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -39,11 +43,11 @@ export default function CalendarLinks({ links, onRegenerate }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <a href={links.google_url} target="_blank" rel="noopener noreferrer" className={linkButton}>
+        <a href={googleUrl} target="_blank" rel="noopener noreferrer" className={linkButton}>
           <ExternalIcon />
           Add to Google Calendar
         </a>
-        <a href={links.webcal_url} className={linkButton}>
+        <a href={webcalUrl} className={linkButton}>
           <CalendarIcon />
           Subscribe in Apple Calendar
         </a>
@@ -54,7 +58,7 @@ export default function CalendarLinks({ links, onRegenerate }) {
       </div>
       <input
         readOnly
-        value={links.feed_url}
+        value={feedUrl}
         aria-label="Calendar feed URL"
         onFocus={(event) => event.target.select()}
         className="field font-mono text-xs sm:text-xs"
