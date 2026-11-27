@@ -14,6 +14,7 @@ import { Switch } from "../components/ui/Switch";
 import { buttonClass } from "../components/ui/styles";
 import { useAuth } from "../context/useAuth";
 import { useAsync } from "../hooks";
+import SettingsBillingCard from "./SettingsBillingCard";
 import SettingsPaymentsCard from "./SettingsPaymentsCard";
 import SettingsQuickBooksCard from "./SettingsQuickBooksCard";
 import SettingsSupportCard from "./SettingsSupportCard";
@@ -310,13 +311,14 @@ function RequestFormCard() {
 export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Settings" description="Your business's request form, job checklists, customer messages, reminders, sales tax, payments, and support access." />
+      <PageHeader title="Settings" description="Your business's request form, job checklists, customer messages, reminders, sales tax, your plan, payments, and support access." />
       <div className="space-y-6">
         <RequestFormCard />
         <SettingsChecklistsCard />
         <SettingsMessagesCard />
         <SettingsRemindersCard />
         <SettingsTaxCard />
+        <SettingsBillingCard />
         <SettingsPaymentsCard />
         <SettingsQuickBooksCard />
         <SettingsSupportCard />
